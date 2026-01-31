@@ -338,6 +338,16 @@
             Learns tempo from first beats, then counts predictively.
             Only adjusts if timing changes consistently.
         </p>
+
+        <!-- Debug panel -->
+        <div class="info-panel" id="debugPanel" style="display: none; margin-top: 15px; font-size: 0.7rem;">
+            <div style="font-weight: bold; margin-bottom: 8px;">Debug Info</div>
+            <div id="debugLog" style="max-height: 150px; overflow-y: auto; font-family: monospace; line-height: 1.4;"></div>
+        </div>
+
+        <button id="toggleDebug" style="margin-top: 10px; padding: 8px 12px; font-size: 0.75rem; background: rgba(255,255,255,0.2); border: none; border-radius: 8px; color: white; cursor: pointer;">
+            Show Debug
+        </button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/meyda@5.6.0/dist/web/meyda.min.js"></script>
@@ -407,6 +417,10 @@
                 this.volumeThresholdSlider = document.getElementById('volumeThresholdSlider');
                 this.volumeThresholdValue = document.getElementById('volumeThresholdValue');
                 this.beatDots = document.querySelectorAll('.beat-dot');
+                this.debugPanel = document.getElementById('debugPanel');
+                this.debugLog = document.getElementById('debugLog');
+                this.toggleDebugBtn = document.getElementById('toggleDebug');
+                this.debugEnabled = false;
 
                 this.bindEvents();
             }
@@ -444,6 +458,26 @@
                 this.selectBestVoice();
                 if (this.synth.onvoiceschanged !== undefined) {
                     this.synth.onvoiceschanged = () => this.selectBestVoice();
+                }
+
+                // Debug toggle
+                this.toggleDebugBtn.addEventListener('click', () => {
+                    this.debugEnabled = !this.debugEnabled;
+                    this.debugPanel.style.display = this.debugEnabled ? 'block' : 'none';
+                    this.toggleDebugBtn.textContent = this.debugEnabled ? 'Hide Debug' : 'Show Debug';
+                });
+            }
+
+            log(msg) {
+                if (!this.debugEnabled) return;
+                const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+                const line = document.createElement('div');
+                line.textContent = `${time} ${msg}`;
+                this.debugLog.appendChild(line);
+                this.debugLog.scrollTop = this.debugLog.scrollHeight;
+                // Keep last 50 lines
+                while (this.debugLog.children.length > 50) {
+                    this.debugLog.removeChild(this.debugLog.firstChild);
                 }
             }
 
@@ -547,6 +581,7 @@
                     // Too quiet - don't detect beats but keep counting if locked
                     return;
                 }
+                this.log(`Vol: ${(volumePercent*100).toFixed(0)}% RMS: ${rms.toFixed(4)}`);
 
                 // Beat detection (always running to track tempo changes)
                 this.energyHistory.push(rms);
@@ -559,6 +594,7 @@
 
                 // Detect beat
                 if (rms > threshold && timeSinceLast > 0.15) {
+                    this.log(`BEAT! rms=${rms.toFixed(3)} thresh=${threshold.toFixed(3)}`);
                     this.onBeatDetected(now, rms);
                 }
             }
@@ -567,10 +603,12 @@
                 // Record beat time and energy
                 if (this.lastBeatTime > 0) {
                     const interval = time - this.lastBeatTime;
+                    this.log(`Interval: ${interval.toFixed(3)}s (${Math.round(60/interval)} BPM)`);
                     if (interval > 0.2 && interval < 1.5) { // 40-300 BPM range
                         this.beatIntervals.push(interval);
                         this.beatTimes.push(time);
                         this.beatEnergies.push(energy);
+                        this.log(`Stored. Total intervals: ${this.beatIntervals.length}`);
 
                         // Keep rolling window
                         if (this.beatIntervals.length > 16) {
@@ -593,6 +631,7 @@
             checkTempo() {
                 if (this.beatIntervals.length < this.lockBeats) {
                     this.modeInfo.textContent = `${this.beatIntervals.length}/${this.lockBeats} beats`;
+                    this.log(`Need more beats: ${this.beatIntervals.length}/${this.lockBeats}`);
                     return;
                 }
 
@@ -612,12 +651,16 @@
                 const minConsistent = Math.ceil(recentIntervals.length * 0.6);
                 const isConsistent = consistentCount >= minConsistent;
 
+                this.log(`Intervals: [${recentIntervals.map(i => i.toFixed(2)).join(', ')}]`);
+                this.log(`Median: ${median.toFixed(3)}s Consistent: ${consistentCount}/${recentIntervals.length} Need: ${minConsistent}`);
+
                 // Show progress
                 if (!this.isTempoLocked) {
                     this.modeInfo.textContent = `${consistentCount}/${recentIntervals.length} consistent`;
                 }
 
                 if (!isConsistent) {
+                    this.log(`NOT consistent enough`);
                     // Beats are inconsistent - but if locked, keep counting!
                     // Just try to adjust tempo gradually
                     if (this.isTempoLocked) {
@@ -641,6 +684,8 @@
                     this.isTempoLocked = true;
                     this.currentCount = 0;
                     this.phraseStartTime = this.beatTimes[this.beatTimes.length - 1];
+
+                    this.log(`*** LOCKED! BPM=${Math.round(this.lockedBPM)} interval=${median.toFixed(3)}s ***`);
 
                     this.updateStatus('Counting', 'counting');
                     this.modeInfo.textContent = 'Locked';
