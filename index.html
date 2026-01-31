@@ -401,7 +401,7 @@
                 // Volume tracking - smoothed
                 this.volumeHistory = [];
                 this.smoothedVolume = 0;
-                this.volumeThreshold = 0.01; // Very low threshold
+                this.volumeThresholdPercent = 0.05; // 5% of max observed volume
                 this.maxObservedVolume = 0.05;
                 this.silenceCounter = 0; // Hysteresis for silence detection
 
@@ -581,7 +581,9 @@
                 this.updateVolumeDisplay();
 
                 // Use hysteresis for silence detection - don't immediately stop
-                if (this.smoothedVolume < this.volumeThreshold) {
+                // Threshold is 5% of max observed volume
+                const volumeThreshold = this.maxObservedVolume * this.volumeThresholdPercent;
+                if (this.smoothedVolume < volumeThreshold) {
                     this.silenceCounter++;
                     // Only go to waiting state after sustained silence (about 1 second)
                     if (this.silenceCounter > 50 && this.isActive) {
@@ -769,11 +771,11 @@
                     this.maxObservedVolume = this.smoothedVolume;
                 }
 
-                const scaledVolume = this.smoothedVolume / Math.max(this.maxObservedVolume, 0.02);
+                const scaledVolume = this.smoothedVolume / Math.max(this.maxObservedVolume, 0.01);
                 const volumePercent = Math.min(100, scaledVolume * 100);
 
-                const thresholdPercent = (this.volumeThreshold / Math.max(this.maxObservedVolume, 0.02)) * 100;
-                this.volumeThresholdEl.style.left = Math.min(thresholdPercent, 30) + '%';
+                // Threshold is always at 5% mark
+                this.volumeThresholdEl.style.left = '5%';
 
                 this.volumeBar.style.width = volumePercent + '%';
                 this.volumePercent.textContent = Math.round(volumePercent) + '%';
