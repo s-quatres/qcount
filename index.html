@@ -377,6 +377,10 @@
                 this.currentCount = 0; // 0-7
                 this.nextScheduledTime = 0;
 
+                // Accent tracking for phrase realignment
+                this.accentHistory = []; // Track where accents fall relative to current count
+                this.requiredAccents = 3; // Need 3 consistent accents to realign
+
                 // Phrase tracking
                 this.phraseStartTime = 0;
 
@@ -506,6 +510,7 @@
                 this.currentCount = 0;
                 this.nextScheduledTime = 0;
                 this.phraseStartTime = 0;
+                this.accentHistory = [];
                 if (this.countTimer) {
                     clearTimeout(this.countTimer);
                     this.countTimer = null;
@@ -656,22 +661,53 @@
 
             checkForAccent(energy) {
                 // Check if this beat is significantly louder than recent beats
-                if (this.beatEnergies.length < 4) return;
+                if (this.beatEnergies.length < 8) return;
 
                 const recentEnergies = this.beatEnergies.slice(-8);
                 const avgEnergy = recentEnergies.reduce((a, b) => a + b, 0) / recentEnergies.length;
 
-                // If this beat is 40% louder than average, it might be a "1"
-                if (energy > avgEnergy * 1.4) {
-                    // This looks like an accent - consider shifting phrase start
-                    // But only if we're not already close to a "1"
+                // If this beat is 50% louder than average, record it as an accent
+                if (energy > avgEnergy * 1.5) {
                     const currentPos = this.currentCount; // 0-7
-                    if (currentPos !== 0 && currentPos !== 7) {
-                        // We detected an accent but we're not on beat 1
-                        // Shift phrase start time to realign
-                        this.phraseStartTime = this.audioContext.currentTime;
-                        this.currentCount = 0;
-                        this.modeInfo.textContent = 'Realigned';
+
+                    // Record where this accent fell
+                    this.accentHistory.push(currentPos);
+
+                    // Keep only last 8 accents
+                    if (this.accentHistory.length > 8) {
+                        this.accentHistory.shift();
+                    }
+
+                    // Check if we have enough consistent accents to realign
+                    if (this.accentHistory.length >= this.requiredAccents) {
+                        // Count which position has the most accents
+                        const counts = {};
+                        for (const pos of this.accentHistory) {
+                            counts[pos] = (counts[pos] || 0) + 1;
+                        }
+
+                        // Find position with most accents
+                        let maxPos = 0;
+                        let maxCount = 0;
+                        for (const [pos, count] of Object.entries(counts)) {
+                            if (count > maxCount) {
+                                maxCount = count;
+                                maxPos = parseInt(pos);
+                            }
+                        }
+
+                        // Only realign if:
+                        // 1. At least 3 accents on same position
+                        // 2. That position is NOT beat 0 (already aligned)
+                        // 3. That position accounts for majority of recent accents
+                        if (maxCount >= 3 && maxPos !== 0 && maxCount >= this.accentHistory.length * 0.6) {
+                            // Shift the phrase so this accent position becomes beat 0
+                            const shift = maxPos;
+                            this.phraseStartTime = this.audioContext.currentTime - (this.currentCount * this.lockedInterval);
+                            this.phraseStartTime += shift * this.lockedInterval;
+                            this.accentHistory = []; // Reset after realignment
+                            this.modeInfo.textContent = 'Realigned';
+                        }
                     }
                 }
             }
