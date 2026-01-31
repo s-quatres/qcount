@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Music Beat Counter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .beat-indicator {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 30px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: bold;
+            transition: all 0.1s ease;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .beat-indicator.pulse {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.5);
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .info-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-stopped {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .status-listening {
+            background: rgba(76, 217, 100, 0.3);
+            border: 1px solid rgba(76, 217, 100, 0.6);
+        }
+
+        .status-error {
+            background: rgba(255, 69, 58, 0.3);
+            border: 1px solid rgba(255, 69, 58, 0.6);
+        }
+
+        .control-button {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 16px;
+            background: white;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .control-button:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .control-button.listening {
+            background: #ff3b30;
+            color: white;
+        }
+
+        .instructions {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            opacity: 0.7;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .beat-indicator {
+                width: 150px;
+                height: 150px;
+                font-size: 3rem;
+            }
+
+            .info-value {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Beat Counter</h1>
+        <p class="subtitle">Listen to music and count the beats</p>
+
+        <div class="beat-indicator" id="beatIndicator">
+            <span id="currentCount">-</span>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                <span class="status-badge status-stopped" id="statusBadge">Stopped</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">BPM</span>
+                <span class="info-value" id="bpmValue">--</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Time Signature</span>
+                <span class="info-value" id="timeSignature">--</span>
+            </div>
+        </div>
+
+        <button class="control-button" id="controlButton">Start Listening</button>
+
+        <p class="instructions">
+            Tap the button to start listening. Make sure to allow microphone access when prompted.
+            Play music near your device for best results.
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/meyda@5.6.0/dist/web/meyda.min.js"></script>
+    <script>
+        class BeatCounter {
+            constructor() {
+                this.isListening = false;
+                this.audioContext = null;
+                this.microphone = null;
+                this.analyzer = null;
+                this.meydaAnalyzer = null;
+
+                // Beat detection state
+                this.energyHistory = [];
+                this.onsetTimes = [];
+                this.beatIntervals = [];
+                this.currentBPM = 0;
+                this.lastBeatTime = 0;
+                this.beatThreshold = 0;
+
+                // Time signature detection
+                this.beatStrengths = [];
+                this.detectedTimeSignature = 4;
+                this.currentBeatInMeasure = 0;
+
+                // Voice synthesis
+                this.synth = window.speechSynthesis;
+                this.isSpeaking = false;
+
+                // UI elements
+                this.controlButton = document.getElementById('controlButton');
+                this.statusBadge = document.getElementById('statusBadge');
+                this.beatIndicator = document.getElementById('beatIndicator');
+                this.currentCount = document.getElementById('currentCount');
+                this.bpmValue = document.getElementById('bpmValue');
+                this.timeSignature = document.getElementById('timeSignature');
+
+                this.bindEvents();
+            }
+
+            bindEvents() {
+                this.controlButton.addEventListener('click', () => {
+                    if (this.isListening) {
+                        this.stop();
+                    } else {
+                        this.start();
+                    }
+                });
+            }
+
+            async start() {
+                try {
+                    // Request microphone access
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false
+                        }
+                    });
+
+                    // Create audio context
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.microphone = this.audioContext.createMediaStreamSource(stream);
+
+                    // Create analyzer
+                    this.analyzer = this.audioContext.createAnalyser();
+                    this.analyzer.fftSize = 2048;
+                    this.analyzer.smoothingTimeConstant = 0.8;
+
+                    this.microphone.connect(this.analyzer);
+
+                    // Initialize Meyda
+                    this.meydaAnalyzer = Meyda.createMeydaAnalyzer({
+                        audioContext: this.audioContext,
+                        source: this.microphone,
+                        bufferSize: 512,
+                        featureExtractors: ['rms', 'energy', 'spectralCentroid'],
+                        callback: (features) => this.processAudio(features)
+                    });
+
+                    this.meydaAnalyzer.start();
+
+                    this.isListening = true;
+                    this.updateUI();
+                    this.updateStatus('Listening...', 'listening');
+
+                } catch (error) {
+                    console.error('Error accessing microphone:', error);
+                    this.updateStatus('Microphone access denied', 'error');
+                    alert('Please allow microphone access to use this app.');
+                }
+            }
+
+            stop() {
+                if (this.meydaAnalyzer) {
+                    this.meydaAnalyzer.stop();
+                }
+
+                if (this.microphone && this.microphone.mediaStream) {
+                    this.microphone.mediaStream.getTracks().forEach(track => track.stop());
+                }
+
+                if (this.audioContext) {
+                    this.audioContext.close();
+                }
+
+                // Reset state
+                this.energyHistory = [];
+                this.onsetTimes = [];
+                this.beatIntervals = [];
+                this.beatStrengths = [];
+                this.currentBPM = 0;
+                this.currentBeatInMeasure = 0;
+
+                this.isListening = false;
+                this.updateUI();
+                this.updateStatus('Stopped', 'stopped');
+                this.currentCount.textContent = '-';
+                this.bpmValue.textContent = '--';
+                this.timeSignature.textContent = '--';
+            }
+
+            processAudio(features) {
+                if (!features || !this.isListening) return;
+
+                const energy = features.energy;
+                const currentTime = this.audioContext.currentTime;
+
+                // Add to energy history (keep last 100 samples)
+                this.energyHistory.push(energy);
+                if (this.energyHistory.length > 100) {
+                    this.energyHistory.shift();
+                }
+
+                // Calculate adaptive threshold
+                const avgEnergy = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
+                this.beatThreshold = avgEnergy * 1.5;
+
+                // Detect onset (beat)
+                if (energy > this.beatThreshold && currentTime - this.lastBeatTime > 0.2) {
+                    this.onBeatDetected(currentTime, energy);
+                }
+            }
+
+            onBeatDetected(time, energy) {
+                // Calculate interval since last beat
+                if (this.lastBeatTime > 0) {
+                    const interval = time - this.lastBeatTime;
+                    this.beatIntervals.push(interval);
+
+                    // Keep last 16 intervals for BPM calculation
+                    if (this.beatIntervals.length > 16) {
+                        this.beatIntervals.shift();
+                    }
+
+                    // Calculate BPM
+                    this.updateBPM();
+                }
+
+                this.lastBeatTime = time;
+
+                // Track beat strength for time signature detection
+                this.beatStrengths.push(energy);
+                if (this.beatStrengths.length > 32) {
+                    this.beatStrengths.shift();
+                }
+
+                // Detect time signature after collecting enough beats
+                if (this.beatStrengths.length >= 16) {
+                    this.detectTimeSignature();
+                }
+
+                // Increment beat counter
+                this.currentBeatInMeasure++;
+                if (this.currentBeatInMeasure > this.detectedTimeSignature) {
+                    this.currentBeatInMeasure = 1;
+                }
+
+                // Update UI and speak
+                this.visualizeBeat();
+                this.speakCount(this.currentBeatInMeasure);
+            }
+
+            updateBPM() {
+                if (this.beatIntervals.length < 4) return;
+
+                // Use median interval to avoid outliers
+                const sorted = [...this.beatIntervals].sort((a, b) => a - b);
+                const median = sorted[Math.floor(sorted.length / 2)];
+
+                // Calculate BPM from interval
+                const bpm = 60 / median;
+
+                // Smooth BPM (avoid rapid changes)
+                if (this.currentBPM === 0) {
+                    this.currentBPM = bpm;
+                } else {
+                    this.currentBPM = this.currentBPM * 0.9 + bpm * 0.1;
+                }
+
+                // Update UI
+                this.bpmValue.textContent = Math.round(this.currentBPM);
+            }
+
+            detectTimeSignature() {
+                if (this.beatStrengths.length < 16) return;
+
+                // Test different time signatures
+                const scores = {
+                    3: this.scoreTimeSignature(3),
+                    4: this.scoreTimeSignature(4),
+                    6: this.scoreTimeSignature(6)
+                };
+
+                // Find best match
+                let bestSignature = 4;
+                let bestScore = scores[4];
+
+                for (const [sig, score] of Object.entries(scores)) {
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestSignature = parseInt(sig);
+                    }
+                }
+
+                // Update if confident
+                if (bestScore > 0.3) {
+                    this.detectedTimeSignature = bestSignature;
+                    this.timeSignature.textContent = `${bestSignature}/4`;
+                }
+            }
+
+            scoreTimeSignature(beatsPerMeasure) {
+                let score = 0;
+                const recentBeats = this.beatStrengths.slice(-16);
+
+                // Check for strong beats at measure boundaries
+                for (let i = 0; i < recentBeats.length; i += beatsPerMeasure) {
+                    if (i >= recentBeats.length) break;
+
+                    const measureBeats = recentBeats.slice(i, i + beatsPerMeasure);
+                    if (measureBeats.length < beatsPerMeasure) break;
+
+                    // First beat should be strongest
+                    const firstBeat = measureBeats[0];
+                    const avgOthers = measureBeats.slice(1).reduce((a, b) => a + b, 0) / (measureBeats.length - 1);
+
+                    if (firstBeat > avgOthers) {
+                        score += (firstBeat - avgOthers) / firstBeat;
+                    }
+                }
+
+                return score / Math.floor(recentBeats.length / beatsPerMeasure);
+            }
+
+            visualizeBeat() {
+                this.currentCount.textContent = this.currentBeatInMeasure;
+                this.beatIndicator.classList.add('pulse');
+
+                setTimeout(() => {
+                    this.beatIndicator.classList.remove('pulse');
+                }, 150);
+            }
+
+            speakCount(count) {
+                // Cancel previous speech if still speaking
+                if (this.synth.speaking) {
+                    this.synth.cancel();
+                }
+
+                const utterance = new SpeechSynthesisUtterance(count.toString());
+                utterance.rate = 1.5;
+                utterance.volume = 0.8;
+                utterance.pitch = 1.0;
+
+                this.synth.speak(utterance);
+            }
+
+            updateUI() {
+                if (this.isListening) {
+                    this.controlButton.textContent = 'Stop Listening';
+                    this.controlButton.classList.add('listening');
+                } else {
+                    this.controlButton.textContent = 'Start Listening';
+                    this.controlButton.classList.remove('listening');
+                }
+            }
+
+            updateStatus(text, type) {
+                this.statusBadge.textContent = text;
+                this.statusBadge.className = 'status-badge status-' + type;
+            }
+        }
+
+        // Initialize app when page loads
+        window.addEventListener('load', () => {
+            new BeatCounter();
+        });
+    </script>
+</body>
+</html>
