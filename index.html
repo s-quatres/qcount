@@ -529,7 +529,10 @@
             }
 
             checkTempo() {
-                if (this.beatIntervals.length < this.lockBeats) return;
+                if (this.beatIntervals.length < this.lockBeats) {
+                    this.modeInfo.textContent = `${this.beatIntervals.length}/${this.lockBeats} beats`;
+                    return;
+                }
 
                 // Get last N intervals
                 const recentIntervals = this.beatIntervals.slice(-this.lockBeats);
@@ -538,20 +541,29 @@
                 const sorted = [...recentIntervals].sort((a, b) => a - b);
                 const median = sorted[Math.floor(sorted.length / 2)];
 
-                // Check consistency - all intervals should be within 15% of median
-                const tolerance = 0.15;
-                const allConsistent = recentIntervals.every(i =>
+                // Check consistency - count how many are within tolerance
+                const tolerance = 0.25; // 25% tolerance
+                const consistentCount = recentIntervals.filter(i =>
                     Math.abs(i - median) / median < tolerance
-                );
+                ).length;
 
-                if (!allConsistent) {
+                // Need at least 60% of beats to be consistent
+                const minConsistent = Math.ceil(recentIntervals.length * 0.6);
+                const isConsistent = consistentCount >= minConsistent;
+
+                // Show progress
+                if (!this.isTempoLocked) {
+                    this.modeInfo.textContent = `${consistentCount}/${recentIntervals.length} consistent`;
+                }
+
+                if (!isConsistent) {
                     // Beats are inconsistent - if we were locked, check if we need to unlock
                     if (this.isTempoLocked) {
                         // Check if last N beats are consistently different from locked tempo
                         const avgRecent = recentIntervals.reduce((a, b) => a + b, 0) / recentIntervals.length;
                         const drift = Math.abs(avgRecent - this.lockedInterval) / this.lockedInterval;
 
-                        if (drift > 0.1) { // More than 10% drift
+                        if (drift > 0.15) { // More than 15% drift
                             // Tempo has changed significantly - relearn
                             this.isTempoLocked = false;
                             if (this.countTimer) {
