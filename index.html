@@ -386,6 +386,7 @@
 
                 // Voice
                 this.synth = window.speechSynthesis;
+                this.selectedVoice = null;
 
                 // UI
                 this.controlButton = document.getElementById('controlButton');
@@ -438,6 +439,12 @@
                     this.volumeThreshold = parseInt(e.target.value) / 100;
                     this.volumeThresholdValue.textContent = e.target.value + '%';
                 });
+
+                // Select best voice when voices are loaded
+                this.selectBestVoice();
+                if (this.synth.onvoiceschanged !== undefined) {
+                    this.synth.onvoiceschanged = () => this.selectBestVoice();
+                }
             }
 
             async start() {
@@ -772,11 +779,48 @@
                 }
 
                 const utterance = new SpeechSynthesisUtterance(count.toString());
-                utterance.rate = 2.2;
-                utterance.volume = 0.9;
-                utterance.pitch = count === 1 ? 1.3 : 1.0;
+
+                // Use selected voice if available
+                if (this.selectedVoice) {
+                    utterance.voice = this.selectedVoice;
+                }
+
+                // Softer, more natural settings
+                utterance.rate = 1.4; // Slower, more relaxed
+                utterance.volume = 0.5; // Softer
+                utterance.pitch = count === 1 ? 1.1 : 0.95; // Subtle accent on 1
 
                 this.synth.speak(utterance);
+            }
+
+            selectBestVoice() {
+                const voices = this.synth.getVoices();
+                if (voices.length === 0) return;
+
+                // Prefer natural/enhanced voices
+                const preferred = [
+                    'Samantha', // iOS/Mac - very natural
+                    'Karen',    // Australian - soft
+                    'Moira',    // Irish - gentle
+                    'Tessa',    // South African
+                    'Fiona',    // Scottish
+                    'Daniel',   // British - calm
+                    'Google',   // Google voices are decent
+                ];
+
+                for (const name of preferred) {
+                    const voice = voices.find(v => v.name.includes(name));
+                    if (voice) {
+                        this.selectedVoice = voice;
+                        return;
+                    }
+                }
+
+                // Fallback to first English voice
+                const englishVoice = voices.find(v => v.lang.startsWith('en'));
+                if (englishVoice) {
+                    this.selectedVoice = englishVoice;
+                }
             }
 
             updateVolumeDisplay() {
