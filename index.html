@@ -1051,7 +1051,7 @@
 
                 // Calculate median
                 const sorted = [...recentIntervals].sort((a, c) => a - c);
-                const median = sorted[Math.floor(sorted.length / 2)];
+                let median = sorted[Math.floor(sorted.length / 2)];
 
                 // Check consistency - count how many are within tolerance
                 const consistentCount = recentIntervals.filter(i =>
@@ -1061,12 +1061,49 @@
                 // Need at least 60% of beats to be consistent
                 const minConsistent = Math.ceil(recentIntervals.length * 0.6);
                 if (consistentCount >= minConsistent) {
+                    // Check for half-tempo: if other bands are locked at ~2x our tempo,
+                    // we're probably detecting every other beat
+                    let shouldHalveInterval = false;
+                    for (let other = 0; other < this.numBands; other++) {
+                        if (other !== b && this.bandTempoLocked[other]) {
+                            const otherInterval = this.bandLockedInterval[other];
+                            // If our interval is ~2x another band's interval (within 15%)
+                            const ratio = median / otherInterval;
+                            if (ratio > 1.7 && ratio < 2.3) {
+                                shouldHalveInterval = true;
+                                this.log(`Band ${b} detected at half-tempo (ratio ${ratio.toFixed(2)}), correcting`);
+                                break;
+                            }
+                        }
+                    }
+
+                    // Also check if interval seems too slow for typical music (>0.75s = <80 BPM)
+                    // and there are faster-tempo possibilities in the intervals
+                    if (!shouldHalveInterval && median > 0.75) {
+                        // Check if half-intervals would also be consistent
+                        const halfIntervals = recentIntervals.map(i => i / 2);
+                        const halfMedian = median / 2;
+                        const halfConsistent = halfIntervals.filter(i =>
+                            Math.abs(i - halfMedian) / halfMedian < this.tolerance
+                        ).length;
+                        // If half-tempo is equally consistent and in normal range, prefer it
+                        if (halfConsistent >= minConsistent && halfMedian > 0.25 && halfMedian < 0.75) {
+                            shouldHalveInterval = true;
+                            this.log(`Band ${b} interval ${median.toFixed(3)}s seems slow, trying half`);
+                        }
+                    }
+
+                    if (shouldHalveInterval) {
+                        median = median / 2;
+                    }
+
                     // Lock this band's tempo
                     this.bandTempoLocked[b] = true;
                     this.bandLockedInterval[b] = median;
                     this.bandNextBeatTime[b] = now + median;
                     // Mark as locked visually
                     this.freqBands[b].classList.add('locked');
+                    this.log(`Band ${b} locked at ${Math.round(60/median)} BPM`);
                 }
             }
 
