@@ -816,8 +816,14 @@
 
                     this.bandEnergies[b] = count > 0 ? sum / count : 0;
 
+                    // Update max with slow decay so it adapts to current levels
                     if (this.bandEnergies[b] > this.maxBandEnergies[b]) {
                         this.maxBandEnergies[b] = this.bandEnergies[b];
+                    } else {
+                        // Slowly decay max (0.5% per frame) so gain adjusts over time
+                        this.maxBandEnergies[b] *= 0.995;
+                        // Keep a minimum floor
+                        this.maxBandEnergies[b] = Math.max(this.maxBandEnergies[b], 0.01);
                     }
                 }
             }
@@ -825,28 +831,31 @@
             detectBandBeats(now) {
                 // Detect beats in each band independently and flash indicators
                 for (let b = 0; b < 10; b++) {
-                    const energy = this.bandEnergies[b];
+                    // Apply automatic gain - normalize each band's energy relative to its own max
+                    const rawEnergy = this.bandEnergies[b];
+                    const normalizedEnergy = rawEnergy / Math.max(this.maxBandEnergies[b], 0.001);
 
-                    // Track energy history per band
-                    this.bandEnergyHistories[b].push(energy);
-                    if (this.bandEnergyHistories[b].length > 15) {
+                    // Track normalized energy history per band
+                    this.bandEnergyHistories[b].push(normalizedEnergy);
+                    if (this.bandEnergyHistories[b].length > 12) {
                         this.bandEnergyHistories[b].shift();
                     }
 
-                    if (this.bandEnergyHistories[b].length < 4) continue;
+                    if (this.bandEnergyHistories[b].length < 3) continue;
 
+                    // Use a lower threshold (1.15x avg) for more sensitive detection
                     const avg = this.bandEnergyHistories[b].reduce((a, c) => a + c, 0) / this.bandEnergyHistories[b].length;
-                    const threshold = avg * this.sensitivity;
+                    const threshold = avg * 1.15;
                     const timeSinceLast = now - this.bandLastBeatTime[b];
 
-                    // Detect beat in this band
-                    if (energy > threshold && timeSinceLast > 0.12) {
+                    // Detect beat in this band - minimum 100ms between beats (600 BPM max)
+                    if (normalizedEnergy > threshold && normalizedEnergy > 0.3 && timeSinceLast > 0.1) {
                         this.bandLastBeatTime[b] = now;
                         // Flash the indicator
                         const bandEl = this.freqBands[b];
                         const beatIndicator = bandEl.querySelector('.band-beat');
                         beatIndicator.classList.add('flash');
-                        setTimeout(() => beatIndicator.classList.remove('flash'), 100);
+                        setTimeout(() => beatIndicator.classList.remove('flash'), 80);
                     }
                 }
             }
