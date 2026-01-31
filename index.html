@@ -71,7 +71,7 @@
 
         /* Volume meter */
         .volume-container {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .volume-label {
@@ -105,6 +105,55 @@
             width: 2px;
             background: white;
             opacity: 0.8;
+        }
+
+        /* Sensitivity slider */
+        .slider-container {
+            margin-bottom: 20px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            opacity: 0.8;
+        }
+
+        .slider-value {
+            font-weight: 600;
+            opacity: 1;
+        }
+
+        .sensitivity-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .sensitivity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .sensitivity-slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
 
         /* Mode selector */
@@ -273,13 +322,22 @@
         <!-- Volume meter -->
         <div class="volume-container" id="volumeContainer" style="display: none;">
             <div class="volume-label">
-                <span>Volume</span>
+                <span>Volume (smoothed)</span>
                 <span id="volumePercent">0%</span>
             </div>
             <div class="volume-meter">
                 <div class="volume-bar" id="volumeBar"></div>
                 <div class="volume-threshold" id="volumeThreshold" style="left: 15%;"></div>
             </div>
+        </div>
+
+        <!-- Sensitivity slider -->
+        <div class="slider-container" id="sliderContainer" style="display: none;">
+            <div class="slider-label">
+                <span>Sensitivity</span>
+                <span class="slider-value" id="sensitivityValue">1.5</span>
+            </div>
+            <input type="range" min="1.1" max="2.5" step="0.1" value="1.5" class="sensitivity-slider" id="sensitivitySlider">
         </div>
 
         <!-- Mode selector -->
@@ -320,8 +378,8 @@
         <button class="control-button" id="controlButton">Start Listening</button>
 
         <p class="instructions">
-            Select a detection mode, then tap Start. Play music near your device.
-            Detection begins when volume exceeds the threshold.
+            Select a mode, adjust sensitivity, then tap Start.
+            Lower sensitivity = more beats detected.
         </p>
     </div>
 
@@ -330,61 +388,29 @@
         class BeatCounter {
             constructor() {
                 this.isListening = false;
-                this.isActive = false; // Actually detecting beats (above volume threshold)
+                this.isActive = false;
                 this.audioContext = null;
                 this.microphone = null;
                 this.analyzer = null;
                 this.meydaAnalyzer = null;
 
-                // Detection mode
+                // Detection mode - all use same buffer size now
                 this.mode = 'simple';
-                this.modeConfigs = {
-                    simple: {
-                        bufferSize: 512,
-                        features: ['rms', 'energy'],
-                        thresholdMultiplier: 1.5,
-                        minBeatInterval: 0.2,
-                        useSpectralFlux: false
-                    },
-                    swing: {
-                        bufferSize: 1024,
-                        features: ['rms', 'energy', 'spectralFlux', 'spectralCentroid'],
-                        thresholdMultiplier: 1.3,
-                        minBeatInterval: 0.15,
-                        useSpectralFlux: true,
-                        swingTolerance: 0.3 // Allow more timing variation
-                    },
-                    percussion: {
-                        bufferSize: 256,
-                        features: ['rms', 'energy', 'spectralFlux', 'spectralCentroid'],
-                        thresholdMultiplier: 1.8,
-                        minBeatInterval: 0.1,
-                        useSpectralFlux: true,
-                        highFreqFocus: true
-                    },
-                    bass: {
-                        bufferSize: 2048,
-                        features: ['rms', 'energy', 'spectralCentroid'],
-                        thresholdMultiplier: 1.4,
-                        minBeatInterval: 0.25,
-                        useSpectralFlux: false,
-                        lowFreqFocus: true
-                    }
-                };
+                this.sensitivity = 1.5; // User adjustable
 
-                // Volume threshold
-                this.volumeThreshold = 0.02; // Actual RMS threshold (quite low)
-                this.currentVolume = 0;
-                this.maxObservedVolume = 0.1; // Track max for better scaling
+                // Volume tracking - smoothed
+                this.volumeHistory = [];
+                this.smoothedVolume = 0;
+                this.volumeThreshold = 0.01; // Very low threshold
+                this.maxObservedVolume = 0.05;
+                this.silenceCounter = 0; // Hysteresis for silence detection
 
                 // Beat detection state
                 this.energyHistory = [];
                 this.spectralFluxHistory = [];
-                this.onsetTimes = [];
                 this.beatIntervals = [];
                 this.currentBPM = 0;
                 this.lastBeatTime = 0;
-                this.beatThreshold = 0;
 
                 // For frequency-focused detection
                 this.frequencyData = null;
@@ -410,6 +436,9 @@
                 this.volumeBar = document.getElementById('volumeBar');
                 this.volumePercent = document.getElementById('volumePercent');
                 this.volumeThresholdEl = document.getElementById('volumeThreshold');
+                this.sliderContainer = document.getElementById('sliderContainer');
+                this.sensitivitySlider = document.getElementById('sensitivitySlider');
+                this.sensitivityValue = document.getElementById('sensitivityValue');
                 this.modeButtons = document.querySelectorAll('.mode-button');
 
                 this.bindEvents();
@@ -424,10 +453,16 @@
                     }
                 });
 
+                // Sensitivity slider
+                this.sensitivitySlider.addEventListener('input', (e) => {
+                    this.sensitivity = parseFloat(e.target.value);
+                    this.sensitivityValue.textContent = this.sensitivity.toFixed(1);
+                });
+
                 // Mode selection
                 this.modeButtons.forEach(button => {
                     button.addEventListener('click', () => {
-                        if (this.isListening) return; // Don't change mode while listening
+                        if (this.isListening) return;
 
                         this.modeButtons.forEach(b => b.classList.remove('active'));
                         button.classList.add('active');
@@ -457,15 +492,12 @@
 
                     this.microphone.connect(this.analyzer);
 
-                    // Get mode config
-                    const config = this.modeConfigs[this.mode];
-
-                    // Initialize Meyda with mode-specific settings
+                    // All modes use same Meyda config for consistency
                     this.meydaAnalyzer = Meyda.createMeydaAnalyzer({
                         audioContext: this.audioContext,
                         source: this.microphone,
-                        bufferSize: config.bufferSize,
-                        featureExtractors: config.features,
+                        bufferSize: 512,
+                        featureExtractors: ['rms', 'energy'],
                         callback: (features) => this.processAudio(features)
                     });
 
@@ -474,12 +506,11 @@
                     this.isListening = true;
                     this.isActive = false;
                     this.volumeContainer.style.display = 'block';
-                    this.volumeThresholdEl.style.left = (this.volumeThreshold * 100) + '%';
+                    this.sliderContainer.style.display = 'block';
                     this.updateUI();
                     this.updateStatus('Waiting for music...', 'waiting');
                     this.beatIndicator.classList.add('waiting');
 
-                    // Disable mode buttons while listening
                     this.modeButtons.forEach(b => b.style.opacity = '0.5');
 
                 } catch (error) {
@@ -502,12 +533,12 @@
                     this.audioContext.close();
                 }
 
-                // Reset state
                 this.resetState();
 
                 this.isListening = false;
                 this.isActive = false;
                 this.volumeContainer.style.display = 'none';
+                this.sliderContainer.style.display = 'none';
                 this.updateUI();
                 this.updateStatus('Stopped', 'stopped');
                 this.currentCount.textContent = '-';
@@ -515,14 +546,14 @@
                 this.timeSignatureEl.textContent = '--';
                 this.beatIndicator.classList.remove('waiting');
 
-                // Re-enable mode buttons
                 this.modeButtons.forEach(b => b.style.opacity = '1');
             }
 
             resetState() {
+                this.volumeHistory = [];
+                this.smoothedVolume = 0;
                 this.energyHistory = [];
                 this.spectralFluxHistory = [];
-                this.onsetTimes = [];
                 this.beatIntervals = [];
                 this.beatStrengths = [];
                 this.lowBandEnergy = [];
@@ -530,23 +561,30 @@
                 this.currentBPM = 0;
                 this.currentBeatInMeasure = 0;
                 this.lastBeatTime = 0;
-                this.maxObservedVolume = 0.1;
+                this.maxObservedVolume = 0.05;
+                this.silenceCounter = 0;
             }
 
             processAudio(features) {
                 if (!features || !this.isListening) return;
 
-                const config = this.modeConfigs[this.mode];
                 const currentTime = this.audioContext.currentTime;
+                const rms = features.rms || 0;
 
-                // Calculate current volume (RMS)
-                this.currentVolume = features.rms || 0;
+                // Update smoothed volume (exponential moving average)
+                this.volumeHistory.push(rms);
+                if (this.volumeHistory.length > 20) {
+                    this.volumeHistory.shift();
+                }
+                this.smoothedVolume = this.volumeHistory.reduce((a, b) => a + b, 0) / this.volumeHistory.length;
+
                 this.updateVolumeDisplay();
 
-                // Check volume threshold
-                if (this.currentVolume < this.volumeThreshold) {
-                    if (this.isActive) {
-                        // Was active, now below threshold
+                // Use hysteresis for silence detection - don't immediately stop
+                if (this.smoothedVolume < this.volumeThreshold) {
+                    this.silenceCounter++;
+                    // Only go to waiting state after sustained silence (about 1 second)
+                    if (this.silenceCounter > 50 && this.isActive) {
                         this.updateStatus('Waiting for music...', 'waiting');
                         this.beatIndicator.classList.add('waiting');
                         this.isActive = false;
@@ -554,119 +592,101 @@
                     return;
                 }
 
+                // Reset silence counter when we have sound
+                this.silenceCounter = 0;
+
                 // Above threshold - start/continue detection
                 if (!this.isActive) {
                     this.isActive = true;
                     this.updateStatus('Detecting...', 'listening');
                     this.beatIndicator.classList.remove('waiting');
-                    this.resetState(); // Fresh start when music begins
                 }
 
-                // Get frequency data for band-specific analysis
+                // Get frequency data
                 this.analyzer.getByteFrequencyData(this.frequencyData);
 
                 // Detect beat based on mode
-                let beatDetected = false;
-                let beatStrength = 0;
-
-                if (config.lowFreqFocus) {
-                    // Bass mode: focus on low frequencies (0-200Hz)
-                    const result = this.detectBassbeat(features, currentTime, config);
-                    beatDetected = result.detected;
-                    beatStrength = result.strength;
-                } else if (config.highFreqFocus) {
-                    // Percussion mode: focus on high frequencies and transients
-                    const result = this.detectPercussionBeat(features, currentTime, config);
-                    beatDetected = result.detected;
-                    beatStrength = result.strength;
-                } else if (config.useSpectralFlux) {
-                    // Swing mode: use spectral flux for complex rhythms
-                    const result = this.detectSwingBeat(features, currentTime, config);
-                    beatDetected = result.detected;
-                    beatStrength = result.strength;
-                } else {
-                    // Simple mode: energy-based detection
-                    const result = this.detectSimpleBeat(features, currentTime, config);
-                    beatDetected = result.detected;
-                    beatStrength = result.strength;
+                let result;
+                switch (this.mode) {
+                    case 'swing':
+                        result = this.detectSwingBeat(features, currentTime);
+                        break;
+                    case 'percussion':
+                        result = this.detectPercussionBeat(features, currentTime);
+                        break;
+                    case 'bass':
+                        result = this.detectBassBeat(features, currentTime);
+                        break;
+                    default:
+                        result = this.detectSimpleBeat(features, currentTime);
                 }
 
-                if (beatDetected) {
-                    this.onBeatDetected(currentTime, beatStrength);
+                if (result.detected) {
+                    this.onBeatDetected(currentTime, result.strength);
                 }
             }
 
-            detectSimpleBeat(features, currentTime, config) {
-                const energy = features.energy || 0;
+            detectSimpleBeat(features, currentTime) {
                 const rms = features.rms || 0;
 
                 this.energyHistory.push(rms);
-                if (this.energyHistory.length > 50) {
+                if (this.energyHistory.length > 30) {
                     this.energyHistory.shift();
                 }
 
-                // Need some history
-                if (this.energyHistory.length < 8) {
+                if (this.energyHistory.length < 5) {
                     return { detected: false, strength: 0 };
                 }
 
                 const avgRms = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
-                const threshold = avgRms * config.thresholdMultiplier;
+                const threshold = avgRms * this.sensitivity;
 
                 const detected = rms > threshold &&
-                    (currentTime - this.lastBeatTime) > config.minBeatInterval;
+                    (currentTime - this.lastBeatTime) > 0.2;
 
                 return { detected, strength: rms };
             }
 
-            detectSwingBeat(features, currentTime, config) {
-                const energy = features.energy || 0;
+            detectSwingBeat(features, currentTime) {
                 const rms = features.rms || 0;
-                const spectralFlux = features.spectralFlux || 0;
+                const energy = features.energy || 0;
 
-                // Use RMS as primary signal for swing (more reliable than spectralFlux)
                 this.energyHistory.push(rms);
                 this.spectralFluxHistory.push(energy);
 
-                if (this.energyHistory.length > 60) {
+                if (this.energyHistory.length > 40) {
                     this.energyHistory.shift();
                 }
-                if (this.spectralFluxHistory.length > 60) {
+                if (this.spectralFluxHistory.length > 40) {
                     this.spectralFluxHistory.shift();
                 }
 
-                // Need some history first
-                if (this.energyHistory.length < 10) {
+                if (this.energyHistory.length < 5) {
                     return { detected: false, strength: 0 };
                 }
 
-                // Calculate adaptive thresholds
                 const avgRms = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
                 const avgEnergy = this.spectralFluxHistory.reduce((a, b) => a + b, 0) / this.spectralFluxHistory.length;
 
-                // For swing: use lower threshold to catch syncopated/off-beats
-                const rmsThreshold = avgRms * 1.15;
-                const energyThreshold = avgEnergy * 1.2;
+                // Swing: lower threshold, shorter interval for syncopation
+                const rmsThreshold = avgRms * (this.sensitivity - 0.2);
+                const energyThreshold = avgEnergy * (this.sensitivity - 0.1);
 
                 const rmsPeak = rms > rmsThreshold;
                 const energyPeak = energy > energyThreshold;
                 const timeSinceLastBeat = currentTime - this.lastBeatTime;
 
-                // Swing has shorter min interval to catch swing 8ths
-                const detected = (rmsPeak || energyPeak) && timeSinceLastBeat > config.minBeatInterval;
+                const detected = (rmsPeak || energyPeak) && timeSinceLastBeat > 0.15;
 
                 return { detected, strength: rms + energy };
             }
 
-            detectPercussionBeat(features, currentTime, config) {
-                const energy = features.energy || 0;
+            detectPercussionBeat(features, currentTime) {
                 const rms = features.rms || 0;
 
-                // Focus on high frequencies (snare, hi-hat around 2-8kHz)
-                // With 2048 FFT at 44.1kHz, each bin is ~21.5Hz
-                // High freq: bins 100-400 (~2kHz - 8.6kHz)
+                // Focus on high frequencies
                 const highFreqStart = Math.floor(this.frequencyData.length * 0.1);
-                const highFreqEnd = Math.floor(this.frequencyData.length * 0.4);
+                const highFreqEnd = Math.floor(this.frequencyData.length * 0.5);
 
                 let highEnergy = 0;
                 for (let i = highFreqStart; i < highFreqEnd; i++) {
@@ -677,94 +697,83 @@
                 this.highBandEnergy.push(highEnergy);
                 this.energyHistory.push(rms);
 
-                if (this.highBandEnergy.length > 50) {
+                if (this.highBandEnergy.length > 30) {
                     this.highBandEnergy.shift();
                 }
-                if (this.energyHistory.length > 50) {
+                if (this.energyHistory.length > 30) {
                     this.energyHistory.shift();
                 }
 
-                // Need some history
-                if (this.highBandEnergy.length < 8) {
+                if (this.highBandEnergy.length < 5) {
                     return { detected: false, strength: 0 };
                 }
 
                 const avgHighEnergy = this.highBandEnergy.reduce((a, b) => a + b, 0) / this.highBandEnergy.length;
                 const avgRms = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
 
-                // Percussion: look for sharp transients in high frequencies
-                const highThreshold = avgHighEnergy * 1.4;
-                const rmsThreshold = avgRms * 1.3;
+                const highThreshold = avgHighEnergy * this.sensitivity;
+                const rmsThreshold = avgRms * (this.sensitivity + 0.2);
 
                 const highPeak = highEnergy > highThreshold;
                 const rmsPeak = rms > rmsThreshold;
                 const timeSinceLastBeat = currentTime - this.lastBeatTime;
 
-                const detected = (highPeak || rmsPeak) && timeSinceLastBeat > config.minBeatInterval;
+                const detected = (highPeak || rmsPeak) && timeSinceLastBeat > 0.1;
 
-                return { detected, strength: highEnergy + rms * 100 };
+                return { detected, strength: highEnergy + rms * 50 };
             }
 
-            detectBassbeat(features, currentTime, config) {
-                const energy = features.energy || 0;
+            detectBassBeat(features, currentTime) {
                 const rms = features.rms || 0;
 
-                // Focus on low frequencies (kick drum, bass: 40-150Hz)
-                // With 2048 FFT at 44.1kHz, each bin is ~21.5Hz
-                // Low freq: bins 2-7 (~43Hz - 150Hz)
-                const lowFreqStart = 2;
-                const lowFreqEnd = Math.floor(this.frequencyData.length * 0.02);
+                // Focus on low frequencies
+                const lowFreqEnd = Math.floor(this.frequencyData.length * 0.05);
 
                 let lowEnergy = 0;
-                for (let i = lowFreqStart; i < Math.max(lowFreqEnd, 8); i++) {
+                for (let i = 1; i < Math.max(lowFreqEnd, 10); i++) {
                     lowEnergy += this.frequencyData[i];
                 }
-                lowEnergy /= Math.max(1, lowFreqEnd - lowFreqStart);
+                lowEnergy /= Math.max(1, lowFreqEnd);
 
                 this.lowBandEnergy.push(lowEnergy);
                 this.energyHistory.push(rms);
 
-                if (this.lowBandEnergy.length > 40) {
+                if (this.lowBandEnergy.length > 25) {
                     this.lowBandEnergy.shift();
                 }
-                if (this.energyHistory.length > 40) {
+                if (this.energyHistory.length > 25) {
                     this.energyHistory.shift();
                 }
 
-                // Need some history
-                if (this.lowBandEnergy.length < 8) {
+                if (this.lowBandEnergy.length < 5) {
                     return { detected: false, strength: 0 };
                 }
 
                 const avgLowEnergy = this.lowBandEnergy.reduce((a, b) => a + b, 0) / this.lowBandEnergy.length;
                 const avgRms = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
 
-                // Bass: look for low frequency pulses
-                const lowThreshold = avgLowEnergy * 1.3;
-                const rmsThreshold = avgRms * 1.25;
+                const lowThreshold = avgLowEnergy * (this.sensitivity - 0.1);
+                const rmsThreshold = avgRms * this.sensitivity;
 
                 const lowPeak = lowEnergy > lowThreshold;
                 const rmsPeak = rms > rmsThreshold;
                 const timeSinceLastBeat = currentTime - this.lastBeatTime;
 
-                const detected = (lowPeak || rmsPeak) && timeSinceLastBeat > config.minBeatInterval;
+                const detected = (lowPeak || rmsPeak) && timeSinceLastBeat > 0.25;
 
-                return { detected, strength: lowEnergy + rms * 100 };
+                return { detected, strength: lowEnergy + rms * 50 };
             }
 
             updateVolumeDisplay() {
-                // Track max observed volume for better scaling
-                if (this.currentVolume > this.maxObservedVolume) {
-                    this.maxObservedVolume = this.currentVolume;
+                if (this.smoothedVolume > this.maxObservedVolume) {
+                    this.maxObservedVolume = this.smoothedVolume;
                 }
 
-                // Scale volume relative to max observed (with minimum floor)
-                const scaledVolume = this.currentVolume / Math.max(this.maxObservedVolume, 0.05);
+                const scaledVolume = this.smoothedVolume / Math.max(this.maxObservedVolume, 0.02);
                 const volumePercent = Math.min(100, scaledVolume * 100);
 
-                // Update threshold indicator position relative to the scale
-                const thresholdPercent = (this.volumeThreshold / Math.max(this.maxObservedVolume, 0.05)) * 100;
-                this.volumeThresholdEl.style.left = Math.min(thresholdPercent, 50) + '%';
+                const thresholdPercent = (this.volumeThreshold / Math.max(this.maxObservedVolume, 0.02)) * 100;
+                this.volumeThresholdEl.style.left = Math.min(thresholdPercent, 30) + '%';
 
                 this.volumeBar.style.width = volumePercent + '%';
                 this.volumePercent.textContent = Math.round(volumePercent) + '%';
@@ -784,7 +793,6 @@
 
                 this.lastBeatTime = time;
 
-                // Track beat strength for time signature detection
                 this.beatStrengths.push(strength);
                 if (this.beatStrengths.length > 32) {
                     this.beatStrengths.shift();
@@ -794,7 +802,6 @@
                     this.detectTimeSignature();
                 }
 
-                // Increment beat counter
                 this.currentBeatInMeasure++;
                 if (this.currentBeatInMeasure > this.detectedTimeSignature) {
                     this.currentBeatInMeasure = 1;
@@ -807,7 +814,6 @@
             updateBPM() {
                 if (this.beatIntervals.length < 4) return;
 
-                // Remove outliers (intervals that are way off)
                 const sorted = [...this.beatIntervals].sort((a, b) => a - b);
                 const q1 = sorted[Math.floor(sorted.length * 0.25)];
                 const q3 = sorted[Math.floor(sorted.length * 0.75)];
@@ -819,14 +825,12 @@
                 const median = validIntervals[Math.floor(validIntervals.length / 2)];
                 const bpm = 60 / median;
 
-                // Smooth BPM
                 if (this.currentBPM === 0) {
                     this.currentBPM = bpm;
                 } else {
                     this.currentBPM = this.currentBPM * 0.85 + bpm * 0.15;
                 }
 
-                // Clamp to reasonable range
                 this.currentBPM = Math.max(40, Math.min(220, this.currentBPM));
 
                 this.bpmValue.textContent = Math.round(this.currentBPM);
@@ -867,11 +871,9 @@
                     const measureBeats = recentBeats.slice(i, i + beatsPerMeasure);
                     if (measureBeats.length < beatsPerMeasure) break;
 
-                    // Normalize beat strengths within measure
                     const maxStrength = Math.max(...measureBeats);
                     const normalized = measureBeats.map(b => b / maxStrength);
 
-                    // First beat should be strongest (or close to it)
                     const firstBeatRank = normalized.filter(b => b >= normalized[0]).length;
                     if (firstBeatRank <= 2) {
                         score += 1;
