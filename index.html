@@ -373,8 +373,9 @@
                 };
 
                 // Volume threshold
-                this.volumeThreshold = 0.15; // 15% - won't detect beats below this
+                this.volumeThreshold = 0.02; // Actual RMS threshold (quite low)
                 this.currentVolume = 0;
+                this.maxObservedVolume = 0.1; // Track max for better scaling
 
                 // Beat detection state
                 this.energyHistory = [];
@@ -529,6 +530,7 @@
                 this.currentBPM = 0;
                 this.currentBeatInMeasure = 0;
                 this.lastBeatTime = 0;
+                this.maxObservedVolume = 0.1;
             }
 
             processAudio(features) {
@@ -711,7 +713,19 @@
             }
 
             updateVolumeDisplay() {
-                const volumePercent = Math.min(100, this.currentVolume * 100);
+                // Track max observed volume for better scaling
+                if (this.currentVolume > this.maxObservedVolume) {
+                    this.maxObservedVolume = this.currentVolume;
+                }
+
+                // Scale volume relative to max observed (with minimum floor)
+                const scaledVolume = this.currentVolume / Math.max(this.maxObservedVolume, 0.05);
+                const volumePercent = Math.min(100, scaledVolume * 100);
+
+                // Update threshold indicator position relative to the scale
+                const thresholdPercent = (this.volumeThreshold / Math.max(this.maxObservedVolume, 0.05)) * 100;
+                this.volumeThresholdEl.style.left = Math.min(thresholdPercent, 50) + '%';
+
                 this.volumeBar.style.width = volumePercent + '%';
                 this.volumePercent.textContent = Math.round(volumePercent) + '%';
             }
