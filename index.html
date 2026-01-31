@@ -54,7 +54,7 @@
             justify-content: center;
             font-size: 4rem;
             font-weight: bold;
-            transition: all 0.1s ease;
+            transition: transform 0.08s ease, background 0.08s ease;
             box-shadow: 0 8px 32px rgba(0,0,0,0.2);
         }
 
@@ -62,7 +62,6 @@
             transform: scale(1.1);
             background: rgba(255, 255, 255, 0.3);
             border-color: rgba(255, 255, 255, 0.6);
-            box-shadow: 0 0 40px rgba(255, 255, 255, 0.5);
         }
 
         .beat-indicator.accent {
@@ -74,7 +73,7 @@
             border-color: rgba(255, 204, 0, 0.6);
         }
 
-        /* Beat strength display */
+        /* Beat dots */
         .phrase-display {
             display: flex;
             justify-content: center;
@@ -92,7 +91,7 @@
             justify-content: center;
             font-size: 0.7rem;
             font-weight: bold;
-            transition: all 0.15s ease;
+            transition: all 0.1s ease;
         }
 
         .beat-dot.current {
@@ -104,6 +103,42 @@
             border: 2px solid rgba(255, 215, 0, 0.8);
         }
 
+        /* Sliders */
+        .slider-container {
+            margin-bottom: 15px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 6px;
+            opacity: 0.9;
+        }
+
+        .slider-value {
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
         /* Volume meter */
         .volume-container {
             margin-bottom: 15px;
@@ -112,15 +147,15 @@
         .volume-label {
             display: flex;
             justify-content: space-between;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             margin-bottom: 5px;
             opacity: 0.8;
         }
 
         .volume-meter {
-            height: 8px;
+            height: 6px;
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
+            border-radius: 3px;
             overflow: hidden;
         }
 
@@ -128,55 +163,8 @@
             height: 100%;
             width: 0%;
             background: linear-gradient(90deg, #4cd964, #ffcc00, #ff3b30);
-            border-radius: 4px;
+            border-radius: 3px;
             transition: width 0.05s ease;
-        }
-
-        /* Sensitivity slider */
-        .slider-container {
-            margin-bottom: 20px;
-        }
-
-        .slider-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            margin-bottom: 8px;
-            opacity: 0.8;
-        }
-
-        .slider-value {
-            font-weight: 600;
-            opacity: 1;
-        }
-
-        .sensitivity-slider {
-            width: 100%;
-            height: 8px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            outline: none;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .sensitivity-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-
-        .sensitivity-slider::-moz-range-thumb {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
-            border: none;
         }
 
         .info-panel {
@@ -192,7 +180,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .info-row:last-child {
@@ -200,27 +188,27 @@
         }
 
         .info-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             opacity: 0.8;
         }
 
         .info-value {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: bold;
         }
 
         .status-badge {
             display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 0.75rem;
             font-weight: 600;
         }
 
         .status-stopped { background: rgba(255, 255, 255, 0.2); }
         .status-waiting { background: rgba(255, 204, 0, 0.3); border: 1px solid rgba(255, 204, 0, 0.6); }
-        .status-listening { background: rgba(76, 217, 100, 0.3); border: 1px solid rgba(76, 217, 100, 0.6); }
-        .status-error { background: rgba(255, 69, 58, 0.3); border: 1px solid rgba(255, 69, 58, 0.6); }
+        .status-learning { background: rgba(100, 149, 237, 0.3); border: 1px solid rgba(100, 149, 237, 0.6); }
+        .status-counting { background: rgba(76, 217, 100, 0.3); border: 1px solid rgba(76, 217, 100, 0.6); }
 
         .control-button {
             width: 100%;
@@ -234,7 +222,6 @@
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-            -webkit-tap-highlight-color: transparent;
         }
 
         .control-button:active {
@@ -249,7 +236,7 @@
         .instructions {
             text-align: center;
             margin-top: 15px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             opacity: 0.7;
             line-height: 1.4;
         }
@@ -258,22 +245,20 @@
             h1 { font-size: 1.5rem; }
             .beat-indicator { width: 140px; height: 140px; font-size: 3rem; }
             .beat-dot { width: 25px; height: 25px; font-size: 0.6rem; }
-            .info-value { font-size: 1rem; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>8-Count</h1>
-        <p class="subtitle">Counts 1-8, finds the phrase</p>
+        <p class="subtitle">Predictive counting with tempo lock</p>
 
         <div class="beat-indicator" id="beatIndicator">
             <span id="currentCount">-</span>
         </div>
 
-        <!-- 8-beat phrase display -->
         <div class="phrase-display" id="phraseDisplay">
-            <div class="beat-dot" data-beat="1">1</div>
+            <div class="beat-dot accent-beat" data-beat="1">1</div>
             <div class="beat-dot" data-beat="2">2</div>
             <div class="beat-dot" data-beat="3">3</div>
             <div class="beat-dot" data-beat="4">4</div>
@@ -283,24 +268,35 @@
             <div class="beat-dot" data-beat="8">8</div>
         </div>
 
-        <!-- Volume meter -->
-        <div class="volume-container" id="volumeContainer" style="display: none;">
-            <div class="volume-label">
-                <span>Volume</span>
-                <span id="volumePercent">0%</span>
+        <div id="controlsContainer" style="display: none;">
+            <!-- Volume meter -->
+            <div class="volume-container">
+                <div class="volume-label">
+                    <span>Volume</span>
+                    <span id="volumePercent">0%</span>
+                </div>
+                <div class="volume-meter">
+                    <div class="volume-bar" id="volumeBar"></div>
+                </div>
             </div>
-            <div class="volume-meter">
-                <div class="volume-bar" id="volumeBar"></div>
-            </div>
-        </div>
 
-        <!-- Sensitivity slider -->
-        <div class="slider-container" id="sliderContainer" style="display: none;">
-            <div class="slider-label">
-                <span>Sensitivity (lower = more beats)</span>
-                <span class="slider-value" id="sensitivityValue">1.4</span>
+            <!-- Sensitivity slider -->
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Beat Sensitivity</span>
+                    <span class="slider-value" id="sensitivityValue">1.4</span>
+                </div>
+                <input type="range" min="1.1" max="2.0" step="0.1" value="1.4" id="sensitivitySlider">
             </div>
-            <input type="range" min="1.1" max="2.0" step="0.1" value="1.4" class="sensitivity-slider" id="sensitivitySlider">
+
+            <!-- Beats for prediction slider -->
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Beats to lock tempo</span>
+                    <span class="slider-value" id="lockBeatsValue">4</span>
+                </div>
+                <input type="range" min="2" max="8" step="1" value="4" id="lockBeatsSlider">
+            </div>
         </div>
 
         <div class="info-panel">
@@ -313,15 +309,16 @@
                 <span class="info-value" id="bpmValue">--</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Phrase</span>
-                <span class="info-value" id="phraseInfo">1-8</span>
+                <span class="info-label">Mode</span>
+                <span class="info-value" id="modeInfo">--</span>
             </div>
         </div>
 
         <button class="control-button" id="controlButton">Start Listening</button>
 
         <p class="instructions">
-            Listens for beats and counts 1-8. Detects the accented beat to align the phrase start.
+            Learns tempo from first beats, then counts predictively.
+            Only adjusts if timing changes consistently.
         </p>
     </div>
 
@@ -330,16 +327,15 @@
         class BeatCounter {
             constructor() {
                 this.isListening = false;
-                this.isActive = false;
                 this.audioContext = null;
                 this.microphone = null;
-                this.analyzer = null;
                 this.meydaAnalyzer = null;
 
                 // Settings
                 this.sensitivity = 1.4;
+                this.lockBeats = 4; // How many consistent beats needed to lock/adjust tempo
 
-                // Volume tracking
+                // Volume
                 this.volumeHistory = [];
                 this.smoothedVolume = 0;
                 this.maxObservedVolume = 0.05;
@@ -347,36 +343,39 @@
                 // Beat detection
                 this.energyHistory = [];
                 this.lastBeatTime = 0;
-                this.beatIntervals = [];
-                this.currentBPM = 0;
 
-                // 8-count phrase tracking
-                this.PHRASE_LENGTH = 8;
-                this.currentBeat = 0; // 0-7 internally, displayed as 1-8
-                this.totalBeatsDetected = 0;
+                // Tempo tracking
+                this.beatTimes = []; // Actual detected beat times
+                this.beatIntervals = []; // Intervals between beats
+                this.lockedBPM = 0; // Locked tempo
+                this.lockedInterval = 0; // Interval in seconds
 
-                // Phrase alignment - track strengths for last N phrases
-                this.recentBeatStrengths = []; // Rolling window of beat strengths
-                this.phraseStrengths = [0, 0, 0, 0, 0, 0, 0, 0]; // Accumulated strength at each position
-                this.phraseOffset = 0; // Which beat position has the accent (0-7)
-                this.lastOffsetChangeTime = 0;
+                // Predictive counting
+                this.isTempoLocked = false;
+                this.countTimer = null;
+                this.currentCount = 0; // 0-7
+                this.nextScheduledTime = 0;
 
-                // Voice synthesis
+                // Phrase tracking
+                this.phraseStartTime = 0;
+
+                // Voice
                 this.synth = window.speechSynthesis;
 
-                // UI elements
+                // UI
                 this.controlButton = document.getElementById('controlButton');
                 this.statusBadge = document.getElementById('statusBadge');
                 this.beatIndicator = document.getElementById('beatIndicator');
-                this.currentCount = document.getElementById('currentCount');
+                this.currentCountEl = document.getElementById('currentCount');
                 this.bpmValue = document.getElementById('bpmValue');
-                this.phraseInfo = document.getElementById('phraseInfo');
-                this.volumeContainer = document.getElementById('volumeContainer');
+                this.modeInfo = document.getElementById('modeInfo');
                 this.volumeBar = document.getElementById('volumeBar');
                 this.volumePercent = document.getElementById('volumePercent');
-                this.sliderContainer = document.getElementById('sliderContainer');
+                this.controlsContainer = document.getElementById('controlsContainer');
                 this.sensitivitySlider = document.getElementById('sensitivitySlider');
                 this.sensitivityValue = document.getElementById('sensitivityValue');
+                this.lockBeatsSlider = document.getElementById('lockBeatsSlider');
+                this.lockBeatsValue = document.getElementById('lockBeatsValue');
                 this.beatDots = document.querySelectorAll('.beat-dot');
 
                 this.bindEvents();
@@ -395,26 +394,21 @@
                     this.sensitivity = parseFloat(e.target.value);
                     this.sensitivityValue.textContent = this.sensitivity.toFixed(1);
                 });
+
+                this.lockBeatsSlider.addEventListener('input', (e) => {
+                    this.lockBeats = parseInt(e.target.value);
+                    this.lockBeatsValue.textContent = this.lockBeats;
+                });
             }
 
             async start() {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: false,
-                            noiseSuppression: false,
-                            autoGainControl: false
-                        }
+                        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
                     });
 
                     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     this.microphone = this.audioContext.createMediaStreamSource(stream);
-
-                    this.analyzer = this.audioContext.createAnalyser();
-                    this.analyzer.fftSize = 2048;
-                    this.analyzer.smoothingTimeConstant = 0.8;
-
-                    this.microphone.connect(this.analyzer);
 
                     this.meydaAnalyzer = Meyda.createMeydaAnalyzer({
                         audioContext: this.audioContext,
@@ -425,226 +419,247 @@
                     });
 
                     this.meydaAnalyzer.start();
+                    this.resetState();
 
                     this.isListening = true;
-                    this.isActive = false;
-                    this.volumeContainer.style.display = 'block';
-                    this.sliderContainer.style.display = 'block';
+                    this.controlsContainer.style.display = 'block';
                     this.updateUI();
-                    this.updateStatus('Waiting for music...', 'waiting');
+                    this.updateStatus('Learning tempo...', 'learning');
+                    this.modeInfo.textContent = 'Listening';
                     this.beatIndicator.classList.add('waiting');
 
                 } catch (error) {
-                    console.error('Error accessing microphone:', error);
-                    this.updateStatus('Mic access denied', 'error');
-                    alert('Please allow microphone access to use this app.');
+                    console.error('Error:', error);
+                    alert('Please allow microphone access.');
                 }
             }
 
             stop() {
+                if (this.countTimer) {
+                    clearTimeout(this.countTimer);
+                    this.countTimer = null;
+                }
                 if (this.meydaAnalyzer) this.meydaAnalyzer.stop();
                 if (this.microphone && this.microphone.mediaStream) {
-                    this.microphone.mediaStream.getTracks().forEach(track => track.stop());
+                    this.microphone.mediaStream.getTracks().forEach(t => t.stop());
                 }
                 if (this.audioContext) this.audioContext.close();
 
-                this.resetState();
                 this.isListening = false;
-                this.isActive = false;
-                this.volumeContainer.style.display = 'none';
-                this.sliderContainer.style.display = 'none';
+                this.controlsContainer.style.display = 'none';
                 this.updateUI();
                 this.updateStatus('Stopped', 'stopped');
-                this.currentCount.textContent = '-';
+                this.currentCountEl.textContent = '-';
                 this.bpmValue.textContent = '--';
-                this.phraseInfo.textContent = '1-8';
-                this.beatIndicator.classList.remove('waiting', 'accent');
-                this.updatePhraseDots(-1, -1);
+                this.modeInfo.textContent = '--';
+                this.beatIndicator.classList.remove('waiting', 'accent', 'pulse');
+                this.clearDots();
             }
 
             resetState() {
                 this.volumeHistory = [];
                 this.smoothedVolume = 0;
-                this.energyHistory = [];
-                this.beatIntervals = [];
-                this.currentBPM = 0;
-                this.currentBeat = 0;
-                this.totalBeatsDetected = 0;
-                this.lastBeatTime = 0;
                 this.maxObservedVolume = 0.05;
-                this.recentBeatStrengths = [];
-                this.phraseStrengths = [0, 0, 0, 0, 0, 0, 0, 0];
-                this.phraseOffset = 0;
+                this.energyHistory = [];
+                this.lastBeatTime = 0;
+                this.beatTimes = [];
+                this.beatIntervals = [];
+                this.lockedBPM = 0;
+                this.lockedInterval = 0;
+                this.isTempoLocked = false;
+                this.currentCount = 0;
+                this.nextScheduledTime = 0;
+                this.phraseStartTime = 0;
+                if (this.countTimer) {
+                    clearTimeout(this.countTimer);
+                    this.countTimer = null;
+                }
             }
 
             processAudio(features) {
                 if (!features || !this.isListening) return;
 
-                const currentTime = this.audioContext.currentTime;
+                const now = this.audioContext.currentTime;
                 const rms = features.rms || 0;
-                const energy = features.energy || 0;
 
                 // Smooth volume
                 this.volumeHistory.push(rms);
-                if (this.volumeHistory.length > 15) this.volumeHistory.shift();
+                if (this.volumeHistory.length > 10) this.volumeHistory.shift();
                 this.smoothedVolume = this.volumeHistory.reduce((a, b) => a + b, 0) / this.volumeHistory.length;
 
-                // Update max observed
                 if (this.smoothedVolume > this.maxObservedVolume) {
                     this.maxObservedVolume = this.smoothedVolume;
                 }
 
                 this.updateVolumeDisplay();
 
-                // Very low threshold - 3% of max
-                const volumeThreshold = this.maxObservedVolume * 0.03;
-                if (this.smoothedVolume < volumeThreshold) {
-                    if (this.isActive) {
-                        this.updateStatus('Waiting for music...', 'waiting');
-                        this.beatIndicator.classList.add('waiting');
-                        this.isActive = false;
+                // Beat detection (always running to track tempo changes)
+                this.energyHistory.push(rms);
+                if (this.energyHistory.length > 25) this.energyHistory.shift();
+                if (this.energyHistory.length < 4) return;
+
+                const avgEnergy = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
+                const threshold = avgEnergy * this.sensitivity;
+                const timeSinceLast = now - this.lastBeatTime;
+
+                // Detect beat
+                if (rms > threshold && timeSinceLast > 0.15) {
+                    this.onBeatDetected(now);
+                }
+            }
+
+            onBeatDetected(time) {
+                // Record beat time
+                if (this.lastBeatTime > 0) {
+                    const interval = time - this.lastBeatTime;
+                    if (interval > 0.2 && interval < 1.5) { // 40-300 BPM range
+                        this.beatIntervals.push(interval);
+                        this.beatTimes.push(time);
+
+                        // Keep rolling window
+                        if (this.beatIntervals.length > 16) {
+                            this.beatIntervals.shift();
+                            this.beatTimes.shift();
+                        }
+
+                        this.checkTempo();
+                    }
+                }
+                this.lastBeatTime = time;
+            }
+
+            checkTempo() {
+                if (this.beatIntervals.length < this.lockBeats) return;
+
+                // Get last N intervals
+                const recentIntervals = this.beatIntervals.slice(-this.lockBeats);
+
+                // Calculate median of recent intervals
+                const sorted = [...recentIntervals].sort((a, b) => a - b);
+                const median = sorted[Math.floor(sorted.length / 2)];
+
+                // Check consistency - all intervals should be within 15% of median
+                const tolerance = 0.15;
+                const allConsistent = recentIntervals.every(i =>
+                    Math.abs(i - median) / median < tolerance
+                );
+
+                if (!allConsistent) {
+                    // Beats are inconsistent - if we were locked, check if we need to unlock
+                    if (this.isTempoLocked) {
+                        // Check if last N beats are consistently different from locked tempo
+                        const avgRecent = recentIntervals.reduce((a, b) => a + b, 0) / recentIntervals.length;
+                        const drift = Math.abs(avgRecent - this.lockedInterval) / this.lockedInterval;
+
+                        if (drift > 0.1) { // More than 10% drift
+                            // Tempo has changed significantly - relearn
+                            this.isTempoLocked = false;
+                            if (this.countTimer) {
+                                clearTimeout(this.countTimer);
+                                this.countTimer = null;
+                            }
+                            this.updateStatus('Relearning...', 'learning');
+                            this.modeInfo.textContent = 'Adjusting';
+                        }
                     }
                     return;
                 }
 
-                if (!this.isActive) {
-                    this.isActive = true;
-                    this.updateStatus('Detecting...', 'listening');
+                // Intervals are consistent
+                const newBPM = 60 / median;
+
+                if (!this.isTempoLocked) {
+                    // Lock tempo and start predictive counting
+                    this.lockedBPM = newBPM;
+                    this.lockedInterval = median;
+                    this.isTempoLocked = true;
+                    this.currentCount = 0;
+                    this.phraseStartTime = this.beatTimes[this.beatTimes.length - 1];
+
+                    this.updateStatus('Counting', 'counting');
+                    this.modeInfo.textContent = 'Locked';
+                    this.bpmValue.textContent = Math.round(this.lockedBPM);
                     this.beatIndicator.classList.remove('waiting');
-                }
 
-                // Beat detection
-                this.energyHistory.push(rms);
-                if (this.energyHistory.length > 30) this.energyHistory.shift();
+                    // Start the count immediately, then schedule next
+                    this.doCount();
+                    this.scheduleNextCount();
+                } else {
+                    // Already locked - check if we should adjust
+                    const drift = Math.abs(median - this.lockedInterval) / this.lockedInterval;
 
-                if (this.energyHistory.length < 5) return;
+                    if (drift > 0.05) { // More than 5% change
+                        // Smoothly adjust tempo
+                        this.lockedInterval = this.lockedInterval * 0.7 + median * 0.3;
+                        this.lockedBPM = 60 / this.lockedInterval;
+                        this.bpmValue.textContent = Math.round(this.lockedBPM);
 
-                const avgEnergy = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
-                const threshold = avgEnergy * this.sensitivity;
-                const timeSinceLastBeat = currentTime - this.lastBeatTime;
-
-                // Detect beat
-                if (rms > threshold && timeSinceLastBeat > 0.15) {
-                    this.onBeatDetected(currentTime, rms);
-                }
-            }
-
-            onBeatDetected(time, strength) {
-                // Track intervals for BPM
-                if (this.lastBeatTime > 0) {
-                    const interval = time - this.lastBeatTime;
-                    if (interval > 0.15 && interval < 2.0) {
-                        this.beatIntervals.push(interval);
-                        if (this.beatIntervals.length > 16) this.beatIntervals.shift();
-                        this.updateBPM();
+                        // Reschedule if needed
+                        this.rescheduleCount();
                     }
                 }
-                this.lastBeatTime = time;
-
-                // Track beat strength for phrase detection
-                this.recentBeatStrengths.push(strength);
-                if (this.recentBeatStrengths.length > 24) { // Keep 3 phrases worth
-                    this.recentBeatStrengths.shift();
-                }
-
-                // Update phrase position strength accumulator
-                const positionInPhrase = this.totalBeatsDetected % this.PHRASE_LENGTH;
-                this.phraseStrengths[positionInPhrase] += strength;
-
-                // Every 8 beats, check if we should adjust phrase alignment
-                if (this.totalBeatsDetected > 0 && this.totalBeatsDetected % 8 === 0) {
-                    this.checkPhraseAlignment(time);
-                }
-
-                this.totalBeatsDetected++;
-
-                // Calculate current count (1-8) based on offset
-                const rawPosition = this.totalBeatsDetected % this.PHRASE_LENGTH;
-                this.currentBeat = ((rawPosition - this.phraseOffset + this.PHRASE_LENGTH) % this.PHRASE_LENGTH);
-
-                // Display as 1-8
-                const displayCount = this.currentBeat + 1;
-
-                this.visualizeBeat(displayCount);
-                this.speakCount(displayCount);
             }
 
-            checkPhraseAlignment(currentTime) {
-                // Don't change alignment too frequently (wait at least 2 phrases / 16 beats)
-                if (currentTime - this.lastOffsetChangeTime < 3) return;
+            scheduleNextCount() {
+                if (!this.isTempoLocked || !this.isListening) return;
 
-                // Find the position with highest accumulated strength
-                const maxStrength = Math.max(...this.phraseStrengths);
-                const strongestPosition = this.phraseStrengths.indexOf(maxStrength);
+                const now = this.audioContext.currentTime;
+                const timeSincePhrase = now - this.phraseStartTime;
+                const beatInPhrase = timeSincePhrase / this.lockedInterval;
+                const nextBeatNumber = Math.ceil(beatInPhrase);
+                const timeToNext = (nextBeatNumber * this.lockedInterval) - timeSincePhrase;
 
-                // Calculate average strength
-                const avgStrength = this.phraseStrengths.reduce((a, b) => a + b, 0) / 8;
+                // Convert to milliseconds and schedule
+                const delayMs = Math.max(10, timeToNext * 1000);
 
-                // Only change if the strongest position is significantly stronger (1.3x average)
-                if (maxStrength > avgStrength * 1.3 && strongestPosition !== this.phraseOffset) {
-                    this.phraseOffset = strongestPosition;
-                    this.lastOffsetChangeTime = currentTime;
+                this.countTimer = setTimeout(() => {
+                    if (this.isListening && this.isTempoLocked) {
+                        this.currentCount = nextBeatNumber % 8;
+                        this.doCount();
+                        this.scheduleNextCount();
+                    }
+                }, delayMs);
+            }
 
-                    // Reset accumulators for fresh detection
-                    this.phraseStrengths = [0, 0, 0, 0, 0, 0, 0, 0];
-
-                    this.phraseInfo.textContent = `Accent on ${strongestPosition + 1}`;
+            rescheduleCount() {
+                if (this.countTimer) {
+                    clearTimeout(this.countTimer);
                 }
+                this.scheduleNextCount();
             }
 
-            updateBPM() {
-                if (this.beatIntervals.length < 4) return;
+            doCount() {
+                const displayCount = this.currentCount + 1; // 1-8
 
-                // Use median to avoid outliers
-                const sorted = [...this.beatIntervals].sort((a, b) => a - b);
-                const median = sorted[Math.floor(sorted.length / 2)];
-                const bpm = 60 / median;
-
-                if (this.currentBPM === 0) {
-                    this.currentBPM = bpm;
-                } else {
-                    this.currentBPM = this.currentBPM * 0.8 + bpm * 0.2;
-                }
-
-                this.currentBPM = Math.max(40, Math.min(220, this.currentBPM));
-                this.bpmValue.textContent = Math.round(this.currentBPM);
-            }
-
-            updateVolumeDisplay() {
-                const scaledVolume = this.smoothedVolume / Math.max(this.maxObservedVolume, 0.01);
-                const volumePercent = Math.min(100, scaledVolume * 100);
-                this.volumeBar.style.width = volumePercent + '%';
-                this.volumePercent.textContent = Math.round(volumePercent) + '%';
-            }
-
-            visualizeBeat(count) {
-                this.currentCount.textContent = count;
-
-                // Highlight if this is beat 1 (phrase start)
-                if (count === 1) {
+                // Visual
+                this.currentCountEl.textContent = displayCount;
+                this.beatIndicator.classList.remove('accent');
+                if (displayCount === 1) {
                     this.beatIndicator.classList.add('accent');
-                } else {
-                    this.beatIndicator.classList.remove('accent');
                 }
 
                 this.beatIndicator.classList.add('pulse');
                 setTimeout(() => {
                     this.beatIndicator.classList.remove('pulse');
-                }, 100);
+                }, 80);
 
-                this.updatePhraseDots(count - 1, this.phraseOffset);
+                this.updateDots(this.currentCount);
+
+                // Speak
+                this.speakCount(displayCount);
             }
 
-            updatePhraseDots(currentPosition, accentPosition) {
-                this.beatDots.forEach((dot, index) => {
-                    dot.classList.remove('current', 'accent-beat');
-                    if (index === currentPosition) {
+            updateDots(currentIndex) {
+                this.beatDots.forEach((dot, i) => {
+                    dot.classList.remove('current');
+                    if (i === currentIndex) {
                         dot.classList.add('current');
                     }
-                    if (index === 0) { // Beat 1 is always the accent after alignment
-                        dot.classList.add('accent-beat');
-                    }
                 });
+            }
+
+            clearDots() {
+                this.beatDots.forEach(dot => dot.classList.remove('current'));
             }
 
             speakCount(count) {
@@ -653,11 +668,18 @@
                 }
 
                 const utterance = new SpeechSynthesisUtterance(count.toString());
-                utterance.rate = 2.0;
+                utterance.rate = 2.2;
                 utterance.volume = 0.9;
-                utterance.pitch = count === 1 ? 1.2 : 1.0; // Higher pitch for beat 1
+                utterance.pitch = count === 1 ? 1.3 : 1.0;
 
                 this.synth.speak(utterance);
+            }
+
+            updateVolumeDisplay() {
+                const scaled = this.smoothedVolume / Math.max(this.maxObservedVolume, 0.01);
+                const percent = Math.min(100, scaled * 100);
+                this.volumeBar.style.width = percent + '%';
+                this.volumePercent.textContent = Math.round(percent) + '%';
             }
 
             updateUI() {
