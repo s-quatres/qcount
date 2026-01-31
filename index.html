@@ -388,7 +388,7 @@
                 <span>Frequency Bands (tap to select)</span>
                 <span class="slider-value" id="selectedBandLabel">All</span>
             </div>
-            <div id="bandGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 8px;"></div>
+            <div id="bandGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px;"></div>
             <div id="noBandsMsg" style="text-align: center; font-size: 0.75rem; opacity: 0.7; margin-bottom: 8px; display: none;">
                 Listening for beats...
             </div>
@@ -494,23 +494,48 @@
                 this.analyser = null;
                 this.frequencyData = null;
 
-                // 20 frequency bands with individual beat detection and tempo locking
-                this.numBands = 20;
-                this.bandRanges = this.generateBandRanges(20, 20, 20000);
+                // Instrument-focused frequency bands for better beat detection
+                // These target specific drum/instrument frequencies
+                this.numBands = 12;
+                this.bandRanges = [
+                    [30, 60],     // Sub bass (kick fundamental)
+                    [60, 100],    // Bass (kick body)
+                    [100, 150],   // Upper bass (kick punch)
+                    [150, 250],   // Low mids (snare body)
+                    [250, 400],   // Mids (snare crack)
+                    [400, 800],   // Upper mids
+                    [800, 1600],  // Presence
+                    [1600, 3200], // Brilliance (snare snap)
+                    [3200, 6000], // High (hi-hat body)
+                    [6000, 10000],// Air (hi-hat shimmer)
+                    [10000, 16000], // Sparkle
+                    [16000, 20000]  // Ultra high
+                ];
+                this.bandNames = ['SubBass', 'Kick', 'Punch', 'Snare', 'Crack', 'Mids', 'Presence', 'Snap', 'HiHat', 'Air', 'Sparkle', 'Ultra'];
                 this.bandEnergies = new Array(this.numBands).fill(0);
                 this.maxBandEnergies = new Array(this.numBands).fill(0.01);
                 this.bandEnergyHistories = Array.from({length: this.numBands}, () => []);
                 this.bandLastBeatTime = new Array(this.numBands).fill(0);
-                this.bandBeatCount = new Array(this.numBands).fill(0); // Each band tracks its own 1-8 count
+                this.bandBeatCount = new Array(this.numBands).fill(0);
+
+                // Spectral flux for onset detection (measures CHANGE in energy, not level)
+                this.prevBandEnergies = new Array(this.numBands).fill(0);
+                this.bandFlux = new Array(this.numBands).fill(0);
+                this.bandFluxHistories = Array.from({length: this.numBands}, () => []);
+
                 // Per-band tempo locking
                 this.bandBeatIntervals = Array.from({length: this.numBands}, () => []);
                 this.bandTempoLocked = new Array(this.numBands).fill(false);
                 this.bandLockedInterval = new Array(this.numBands).fill(0);
                 this.bandNextBeatTime = new Array(this.numBands).fill(0);
                 // Per-band activity tracking for dynamic visibility
-                this.bandRecentBeats = new Array(this.numBands).fill(0); // beats in last few seconds
-                this.bandConsistencyScore = new Array(this.numBands).fill(0); // 0-100 score
-                this.showAllBands = false; // toggle to show all vs only active
+                this.bandRecentBeats = new Array(this.numBands).fill(0);
+                this.bandConsistencyScore = new Array(this.numBands).fill(0);
+                this.showAllBands = false;
+
+                // Global onset detection using spectral flux
+                this.onsetHistory = [];
+                this.lastOnsetTime = 0;
 
                 // Tempo tracking
                 this.beatTimes = []; // Actual detected beat times
@@ -577,35 +602,17 @@
                 this.bindEvents();
             }
 
-            generateBandRanges(numBands, minFreq, maxFreq) {
-                // Generate logarithmically spaced frequency bands
-                const ranges = [];
-                const logMin = Math.log10(minFreq);
-                const logMax = Math.log10(maxFreq);
-                const step = (logMax - logMin) / numBands;
-
-                for (let i = 0; i < numBands; i++) {
-                    const low = Math.round(Math.pow(10, logMin + i * step));
-                    const high = Math.round(Math.pow(10, logMin + (i + 1) * step));
-                    ranges.push([low, high]);
-                }
-                return ranges;
-            }
-
             generateBandGrid() {
                 this.bandGrid.innerHTML = '';
                 for (let i = 0; i < this.numBands; i++) {
-                    const [low, high] = this.bandRanges[i];
-                    const label = high >= 1000
-                        ? `${(low/1000).toFixed(1)}-${(high/1000).toFixed(1)}k`
-                        : `${low}-${high}`;
+                    const name = this.bandNames[i];
                     const div = document.createElement('div');
                     div.className = 'freq-band' + (i === 0 ? ' selected' : '');
                     div.dataset.band = i;
                     div.innerHTML = `
                         <div class="band-beat"></div>
                         <div class="band-bar"><div class="band-fill"></div></div>
-                        <div class="band-label">${label}</div>
+                        <div class="band-label">${name}</div>
                         <div class="band-score" data-band="${i}"></div>
                     `;
                     this.bandGrid.appendChild(div);
@@ -779,6 +786,9 @@
                 this.accentHistory = [];
                 this.maxBandEnergies = new Array(this.numBands).fill(0.01);
                 this.bandEnergyHistories = Array.from({length: this.numBands}, () => []);
+                this.prevBandEnergies = new Array(this.numBands).fill(0);
+                this.bandFlux = new Array(this.numBands).fill(0);
+                this.bandFluxHistories = Array.from({length: this.numBands}, () => []);
                 this.bandLastBeatTime = new Array(this.numBands).fill(0);
                 this.bandBeatCount = new Array(this.numBands).fill(0);
                 this.bandBeatIntervals = Array.from({length: this.numBands}, () => []);
@@ -787,6 +797,8 @@
                 this.bandNextBeatTime = new Array(this.numBands).fill(0);
                 this.bandRecentBeats = new Array(this.numBands).fill(0);
                 this.bandConsistencyScore = new Array(this.numBands).fill(0);
+                this.onsetHistory = [];
+                this.lastOnsetTime = 0;
                 // Clear the displayed counts in beat indicators
                 this.freqBands.forEach(band => {
                     const beatIndicator = band.querySelector('.band-beat');
@@ -871,15 +883,20 @@
                         count++;
                     }
 
-                    this.bandEnergies[b] = count > 0 ? sum / count : 0;
+                    const currentEnergy = count > 0 ? sum / count : 0;
+
+                    // Calculate spectral flux (positive change only = onset)
+                    // This detects when new energy appears, not just high energy
+                    const flux = Math.max(0, currentEnergy - this.prevBandEnergies[b]);
+                    this.bandFlux[b] = flux;
+                    this.prevBandEnergies[b] = currentEnergy;
+                    this.bandEnergies[b] = currentEnergy;
 
                     // Update max with slow decay so it adapts to current levels
                     if (this.bandEnergies[b] > this.maxBandEnergies[b]) {
                         this.maxBandEnergies[b] = this.bandEnergies[b];
                     } else {
-                        // Slowly decay max (0.5% per frame) so gain adjusts over time
                         this.maxBandEnergies[b] *= 0.995;
-                        // Keep a minimum floor
                         this.maxBandEnergies[b] = Math.max(this.maxBandEnergies[b], 0.01);
                     }
                 }
@@ -913,25 +930,34 @@
                         continue; // Skip beat detection for locked bands
                     }
 
-                    // Apply automatic gain - normalize each band's energy relative to its own max
-                    const rawEnergy = this.bandEnergies[b];
-                    const normalizedEnergy = rawEnergy / Math.max(this.maxBandEnergies[b], 0.001);
+                    // Use spectral flux (change in energy) for onset detection
+                    // This is more robust than raw energy - detects note ATTACKS not sustains
+                    const flux = this.bandFlux[b];
+                    const normalizedFlux = flux / Math.max(this.maxBandEnergies[b], 0.001);
 
-                    // Track normalized energy history per band
+                    // Track flux history per band for adaptive threshold
+                    this.bandFluxHistories[b].push(normalizedFlux);
+                    if (this.bandFluxHistories[b].length > 20) {
+                        this.bandFluxHistories[b].shift();
+                    }
+
+                    // Also track energy for display
+                    const normalizedEnergy = this.bandEnergies[b] / Math.max(this.maxBandEnergies[b], 0.001);
                     this.bandEnergyHistories[b].push(normalizedEnergy);
                     if (this.bandEnergyHistories[b].length > 12) {
                         this.bandEnergyHistories[b].shift();
                     }
 
-                    if (this.bandEnergyHistories[b].length < 3) continue;
+                    if (this.bandFluxHistories[b].length < 5) continue;
 
-                    // Use a lower threshold (1.15x avg) for more sensitive detection
-                    const avg = this.bandEnergyHistories[b].reduce((a, c) => a + c, 0) / this.bandEnergyHistories[b].length;
-                    const threshold = avg * 1.15;
+                    // Adaptive threshold based on recent flux activity
+                    const avgFlux = this.bandFluxHistories[b].reduce((a, c) => a + c, 0) / this.bandFluxHistories[b].length;
+                    const fluxThreshold = avgFlux * (this.sensitivity + 0.5); // Flux needs higher multiplier
                     const timeSinceLast = now - this.bandLastBeatTime[b];
 
-                    // Detect beat in this band - minimum 100ms between beats (600 BPM max)
-                    if (normalizedEnergy > threshold && normalizedEnergy > 0.3 && timeSinceLast > 0.1) {
+                    // Detect onset using spectral flux - must have significant CHANGE
+                    // Also require minimum energy level to avoid noise triggers
+                    if (normalizedFlux > fluxThreshold && normalizedFlux > 0.05 && normalizedEnergy > 0.2 && timeSinceLast > 0.1) {
                         // Track activity - increment recent beat count
                         this.bandRecentBeats[b] = Math.min(10, this.bandRecentBeats[b] + 1);
 
