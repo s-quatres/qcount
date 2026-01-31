@@ -701,10 +701,9 @@
                         // 2. That position is NOT beat 0 (already aligned)
                         // 3. That position accounts for majority of recent accents
                         if (maxCount >= 3 && maxPos !== 0 && maxCount >= this.accentHistory.length * 0.6) {
-                            // Shift the phrase so this accent position becomes beat 0
-                            const shift = maxPos;
-                            this.phraseStartTime = this.audioContext.currentTime - (this.currentCount * this.lockedInterval);
-                            this.phraseStartTime += shift * this.lockedInterval;
+                            // Set current count so next beat will be "1"
+                            // If accents keep falling on position 3, we want to shift so that becomes 0
+                            this.currentCount = 7; // Next increment will make it 0 (which displays as 1)
                             this.accentHistory = []; // Reset after realignment
                             this.modeInfo.textContent = 'Realigned';
                         }
@@ -715,18 +714,13 @@
             scheduleNextCount() {
                 if (!this.isTempoLocked || !this.isListening) return;
 
-                const now = this.audioContext.currentTime;
-                const timeSincePhrase = now - this.phraseStartTime;
-                const beatInPhrase = timeSincePhrase / this.lockedInterval;
-                const nextBeatNumber = Math.ceil(beatInPhrase);
-                const timeToNext = (nextBeatNumber * this.lockedInterval) - timeSincePhrase;
-
-                // Convert to milliseconds and schedule
-                const delayMs = Math.max(10, timeToNext * 1000);
+                // Simply schedule next count after one beat interval
+                const delayMs = this.lockedInterval * 1000;
 
                 this.countTimer = setTimeout(() => {
                     if (this.isListening && this.isTempoLocked) {
-                        this.currentCount = nextBeatNumber % 8;
+                        // Always increment sequentially: 0,1,2,3,4,5,6,7,0,1,2...
+                        this.currentCount = (this.currentCount + 1) % 8;
                         this.doCount();
                         this.scheduleNextCount();
                     }
@@ -734,10 +728,8 @@
             }
 
             rescheduleCount() {
-                if (this.countTimer) {
-                    clearTimeout(this.countTimer);
-                }
-                this.scheduleNextCount();
+                // Don't interrupt current timing - just let next count use new interval
+                // The scheduleNextCount will pick up the new lockedInterval
             }
 
             doCount() {
