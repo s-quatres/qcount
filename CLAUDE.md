@@ -85,5 +85,14 @@ Click "Show Debug" to see:
 3. **No volume**: Check microphone permissions, Min Volume setting
 
 ## Deployment
-- GitHub Pages: https://s-quatres.github.io/qcount/
-- Repo: https://github.com/s-quatres/qcount
+- **GitHub Pages**: https://s-quatres.github.io/qcount/
+- **Repository**: https://github.com/s-quatres/qcount
+
+### After Making Changes
+Always push changes to deploy to GitHub Pages:
+```bash
+git add index.html CLAUDE.md
+git commit -m "Description of changes"
+git push origin master
+```
+Changes are automatically deployed via GitHub Pages after pushing to main.

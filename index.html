@@ -214,11 +214,18 @@
             background: rgba(255,255,255,0.2);
             margin: 0 auto 4px;
             transition: all 0.05s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: rgba(255,255,255,0.7);
         }
 
         .band-beat.flash {
             background: #ffcc00;
             box-shadow: 0 0 10px #ffcc00;
+            color: #333;
         }
 
         .band-bar {
@@ -521,6 +528,7 @@
                 this.maxBandEnergies = new Array(10).fill(0.01);
                 this.bandEnergyHistories = Array.from({length: 10}, () => []);
                 this.bandLastBeatTime = new Array(10).fill(0);
+                this.bandBeatCount = new Array(10).fill(0); // Each band tracks its own 1-8 count
 
                 // Tempo tracking
                 this.beatTimes = []; // Actual detected beat times
@@ -738,6 +746,12 @@
                 this.maxBandEnergies = new Array(10).fill(0.01);
                 this.bandEnergyHistories = Array.from({length: 10}, () => []);
                 this.bandLastBeatTime = new Array(10).fill(0);
+                this.bandBeatCount = new Array(10).fill(0);
+                // Clear the displayed counts in beat indicators
+                this.freqBands.forEach(band => {
+                    const beatIndicator = band.querySelector('.band-beat');
+                    beatIndicator.textContent = '';
+                });
                 if (this.countTimer) {
                     clearTimeout(this.countTimer);
                     this.countTimer = null;
@@ -851,9 +865,12 @@
                     // Detect beat in this band - minimum 100ms between beats (600 BPM max)
                     if (normalizedEnergy > threshold && normalizedEnergy > 0.3 && timeSinceLast > 0.1) {
                         this.bandLastBeatTime[b] = now;
-                        // Flash the indicator
+                        // Increment this band's beat count (0-7, displays as 1-8)
+                        this.bandBeatCount[b] = (this.bandBeatCount[b] + 1) % 8;
+                        // Flash the indicator and show count
                         const bandEl = this.freqBands[b];
                         const beatIndicator = bandEl.querySelector('.band-beat');
+                        beatIndicator.textContent = this.bandBeatCount[b] + 1;
                         beatIndicator.classList.add('flash');
                         setTimeout(() => beatIndicator.classList.remove('flash'), 80);
                     }
