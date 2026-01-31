@@ -217,6 +217,16 @@
             background: rgba(255,255,255,0.2);
         }
 
+        .freq-band.hidden {
+            display: none;
+        }
+
+        .freq-band .band-score {
+            font-size: 0.45rem;
+            opacity: 0.6;
+            margin-top: 1px;
+        }
+
         .band-beat {
             width: 18px;
             height: 18px;
@@ -378,9 +388,13 @@
                 <span>Frequency Bands (tap to select)</span>
                 <span class="slider-value" id="selectedBandLabel">All</span>
             </div>
-            <div id="bandGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 15px;"></div>
+            <div id="bandGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 8px;"></div>
+            <div id="noBandsMsg" style="text-align: center; font-size: 0.75rem; opacity: 0.7; margin-bottom: 8px; display: none;">
+                Listening for beats...
+            </div>
             <div style="display: flex; gap: 8px; margin-bottom: 15px;">
                 <button class="band-btn active" data-band="all" id="allBandBtn">Use All</button>
+                <button class="band-btn" id="showAllBandsBtn">Show All Bands</button>
             </div>
 
             <!-- Sensitivity slider -->
@@ -493,6 +507,10 @@
                 this.bandTempoLocked = new Array(this.numBands).fill(false);
                 this.bandLockedInterval = new Array(this.numBands).fill(0);
                 this.bandNextBeatTime = new Array(this.numBands).fill(0);
+                // Per-band activity tracking for dynamic visibility
+                this.bandRecentBeats = new Array(this.numBands).fill(0); // beats in last few seconds
+                this.bandConsistencyScore = new Array(this.numBands).fill(0); // 0-100 score
+                this.showAllBands = false; // toggle to show all vs only active
 
                 // Tempo tracking
                 this.beatTimes = []; // Actual detected beat times
@@ -546,10 +564,15 @@
                 this.selectedBandLabel = document.getElementById('selectedBandLabel');
                 this.allBandBtn = document.getElementById('allBandBtn');
                 this.bandGrid = document.getElementById('bandGrid');
+                this.showAllBandsBtn = document.getElementById('showAllBandsBtn');
+                this.noBandsMsg = document.getElementById('noBandsMsg');
 
                 // Generate band grid HTML
                 this.generateBandGrid();
                 this.freqBands = document.querySelectorAll('.freq-band');
+
+                // Start with all bands hidden (will show as they detect beats)
+                this.freqBands.forEach(b => b.classList.add('hidden'));
 
                 this.bindEvents();
             }
@@ -583,6 +606,7 @@
                         <div class="band-beat"></div>
                         <div class="band-bar"><div class="band-fill"></div></div>
                         <div class="band-label">${label}</div>
+                        <div class="band-score" data-band="${i}"></div>
                     `;
                     this.bandGrid.appendChild(div);
                 }
@@ -652,6 +676,14 @@
                     this.selectedBandLabel.textContent = 'All';
                     this.log('Switched to all bands');
                     this.energyHistory = [];
+                });
+
+                // "Show All Bands" toggle
+                this.showAllBandsBtn.addEventListener('click', () => {
+                    this.showAllBands = !this.showAllBands;
+                    this.showAllBandsBtn.classList.toggle('active', this.showAllBands);
+                    this.showAllBandsBtn.textContent = this.showAllBands ? 'Auto-Hide Bands' : 'Show All Bands';
+                    this.updateBandVisibility();
                 });
             }
 
@@ -753,12 +785,16 @@
                 this.bandTempoLocked = new Array(this.numBands).fill(false);
                 this.bandLockedInterval = new Array(this.numBands).fill(0);
                 this.bandNextBeatTime = new Array(this.numBands).fill(0);
+                this.bandRecentBeats = new Array(this.numBands).fill(0);
+                this.bandConsistencyScore = new Array(this.numBands).fill(0);
                 // Clear the displayed counts in beat indicators
                 this.freqBands.forEach(band => {
                     const beatIndicator = band.querySelector('.band-beat');
                     beatIndicator.textContent = '';
                     band.classList.remove('locked');
+                    band.classList.add('hidden');
                 });
+                this.noBandsMsg.style.display = 'block';
                 if (this.countTimer) {
                     clearTimeout(this.countTimer);
                     this.countTimer = null;
@@ -850,6 +886,11 @@
             }
 
             detectBandBeats(now) {
+                // Decay recent beat counts slowly
+                for (let b = 0; b < this.numBands; b++) {
+                    this.bandRecentBeats[b] *= 0.995; // Slow decay
+                }
+
                 // Detect beats in each band independently
                 for (let b = 0; b < this.numBands; b++) {
                     const bandEl = this.freqBands[b];
@@ -866,6 +907,8 @@
                             setTimeout(() => beatIndicator.classList.remove('flash'), 80);
                             // Schedule next beat
                             this.bandNextBeatTime[b] = now + this.bandLockedInterval[b];
+                            // Track activity for locked bands too
+                            this.bandRecentBeats[b] = Math.min(10, this.bandRecentBeats[b] + 1);
                         }
                         continue; // Skip beat detection for locked bands
                     }
@@ -889,6 +932,9 @@
 
                     // Detect beat in this band - minimum 100ms between beats (600 BPM max)
                     if (normalizedEnergy > threshold && normalizedEnergy > 0.3 && timeSinceLast > 0.1) {
+                        // Track activity - increment recent beat count
+                        this.bandRecentBeats[b] = Math.min(10, this.bandRecentBeats[b] + 1);
+
                         // Record interval for tempo locking
                         if (this.bandLastBeatTime[b] > 0) {
                             const interval = now - this.bandLastBeatTime[b];
@@ -898,6 +944,8 @@
                                 if (this.bandBeatIntervals[b].length > this.lockBeats * 2) {
                                     this.bandBeatIntervals[b].shift();
                                 }
+                                // Calculate consistency score
+                                this.updateBandConsistency(b);
                                 // Try to lock tempo for this band
                                 this.tryLockBandTempo(b, now);
                             }
@@ -913,6 +961,43 @@
                         }
                     }
                 }
+
+                // Update which bands are visible
+                this.updateBandVisibility();
+            }
+
+            updateBandConsistency(b) {
+                if (this.bandBeatIntervals[b].length < 3) {
+                    this.bandConsistencyScore[b] = 0;
+                    return;
+                }
+                const intervals = this.bandBeatIntervals[b].slice(-this.lockBeats);
+                const sorted = [...intervals].sort((a, c) => a - c);
+                const median = sorted[Math.floor(sorted.length / 2)];
+                const consistentCount = intervals.filter(i =>
+                    Math.abs(i - median) / median < this.tolerance
+                ).length;
+                this.bandConsistencyScore[b] = Math.round((consistentCount / intervals.length) * 100);
+            }
+
+            updateBandVisibility() {
+                let visibleCount = 0;
+                const minActivity = 2; // Need at least 2 recent beats to show
+
+                for (let b = 0; b < this.numBands; b++) {
+                    const bandEl = this.freqBands[b];
+                    const isActive = this.bandRecentBeats[b] >= minActivity || this.bandTempoLocked[b];
+
+                    if (this.showAllBands || isActive) {
+                        bandEl.classList.remove('hidden');
+                        visibleCount++;
+                    } else {
+                        bandEl.classList.add('hidden');
+                    }
+                }
+
+                // Show message if no bands are visible
+                this.noBandsMsg.style.display = visibleCount === 0 ? 'block' : 'none';
             }
 
             tryLockBandTempo(b, now) {
@@ -943,12 +1028,23 @@
             }
 
             updateBandDisplay() {
-                // Update the energy bar for each band
+                // Update the energy bar and score for each band
                 for (let b = 0; b < this.numBands; b++) {
                     const percent = Math.min(100, (this.bandEnergies[b] / Math.max(this.maxBandEnergies[b], 0.01)) * 100);
                     const bandEl = this.freqBands[b];
                     const fill = bandEl.querySelector('.band-fill');
                     fill.style.width = percent + '%';
+
+                    // Update consistency score display
+                    const scoreEl = bandEl.querySelector('.band-score');
+                    if (this.bandTempoLocked[b]) {
+                        const bpm = Math.round(60 / this.bandLockedInterval[b]);
+                        scoreEl.textContent = `${bpm}bpm`;
+                    } else if (this.bandConsistencyScore[b] > 0) {
+                        scoreEl.textContent = `${this.bandConsistencyScore[b]}%`;
+                    } else {
+                        scoreEl.textContent = '';
+                    }
                 }
             }
 
