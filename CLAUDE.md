@@ -67,12 +67,12 @@ Each band independently:
 4. Once locked, counts predictively (1-8) without resetting
 5. Visual indicator: yellow border = locked
 
-### Main Counter Tempo Locking
-1. Collect N beat intervals from selected band (configurable: 2-8)
-2. Calculate median interval
-3. Check consistency: 60% must be within tolerance of median
-4. Once locked, count predictively using setTimeout
-5. Adjusts gradually if tempo drifts (90/10 weighted average)
+### Main Counter
+The main display simply follows the selected band:
+1. When "Use All" is active, auto-selects first locked band
+2. Tap a band to select it manually
+3. Main counter mirrors the selected band's count and speaks aloud
+4. Shows BPM and band name when locked
 
 ### Counting Logic
 - Always sequential: 1→2→3→4→5→6→7→8→1...
@@ -88,10 +88,9 @@ Each band independently:
 ## Key Settings (User Adjustable)
 | Setting | Default | Range | Purpose |
 |---------|---------|-------|---------|
-| Beat Sensitivity | 1.3 | 1.0-2.0 | Lower = more sensitive |
+| Onset Threshold | 1.8 | 1.0-3.0 | Higher = less sensitive to onsets |
 | Beats to Lock | 4 | 2-8 | Beats needed before tempo locks |
-| Beat Tolerance | 25% | 10-50% | How consistent beats must be |
-| Min Volume | 5% | 1-20% | Volume threshold to start detection |
+| Tempo Tolerance | 25% | 10-50% | How consistent beats must be |
 
 ## State Variables
 ### Global
