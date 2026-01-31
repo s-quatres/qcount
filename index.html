@@ -167,6 +167,27 @@
             transition: width 0.05s ease;
         }
 
+        .band-btn {
+            flex: 1;
+            padding: 8px 4px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .band-btn.active {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.6);
+        }
+
+        .band-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
         .info-panel {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
@@ -280,6 +301,49 @@
                 </div>
             </div>
 
+            <!-- Frequency band meters -->
+            <div class="volume-container">
+                <div class="volume-label">
+                    <span>Bass (20-250Hz)</span>
+                    <span id="bassPercent">0%</span>
+                </div>
+                <div class="volume-meter" style="cursor: pointer;" id="bassSelect">
+                    <div class="volume-bar" id="bassBar" style="background: #ff6b6b;"></div>
+                </div>
+            </div>
+            <div class="volume-container">
+                <div class="volume-label">
+                    <span>Mid (250-2kHz)</span>
+                    <span id="midPercent">0%</span>
+                </div>
+                <div class="volume-meter" style="cursor: pointer;" id="midSelect">
+                    <div class="volume-bar" id="midBar" style="background: #4ecdc4;"></div>
+                </div>
+            </div>
+            <div class="volume-container">
+                <div class="volume-label">
+                    <span>High (2k-20kHz)</span>
+                    <span id="highPercent">0%</span>
+                </div>
+                <div class="volume-meter" style="cursor: pointer;" id="highSelect">
+                    <div class="volume-bar" id="highBar" style="background: #a29bfe;"></div>
+                </div>
+            </div>
+
+            <!-- Frequency band selection -->
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Detect from</span>
+                    <span class="slider-value" id="bandValue">All</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 6px;">
+                    <button class="band-btn active" data-band="all">All</button>
+                    <button class="band-btn" data-band="bass">Bass</button>
+                    <button class="band-btn" data-band="mid">Mid</button>
+                    <button class="band-btn" data-band="high">High</button>
+                </div>
+            </div>
+
             <!-- Sensitivity slider -->
             <div class="slider-container">
                 <div class="slider-label">
@@ -373,6 +437,11 @@
                 // Beat detection
                 this.energyHistory = [];
                 this.lastBeatTime = 0;
+                this.selectedBand = 'all'; // 'all', 'bass', 'mid', 'high'
+                this.analyser = null;
+                this.frequencyData = null;
+                this.bandEnergies = { bass: 0, mid: 0, high: 0 };
+                this.maxBandEnergies = { bass: 0.01, mid: 0.01, high: 0.01 };
 
                 // Tempo tracking
                 this.beatTimes = []; // Actual detected beat times
@@ -422,6 +491,16 @@
                 this.toggleDebugBtn = document.getElementById('toggleDebug');
                 this.debugEnabled = false;
 
+                // Frequency band UI
+                this.bassBar = document.getElementById('bassBar');
+                this.midBar = document.getElementById('midBar');
+                this.highBar = document.getElementById('highBar');
+                this.bassPercent = document.getElementById('bassPercent');
+                this.midPercent = document.getElementById('midPercent');
+                this.highPercent = document.getElementById('highPercent');
+                this.bandValue = document.getElementById('bandValue');
+                this.bandButtons = document.querySelectorAll('.band-btn');
+
                 this.bindEvents();
             }
 
@@ -466,6 +545,19 @@
                     this.debugPanel.style.display = this.debugEnabled ? 'block' : 'none';
                     this.toggleDebugBtn.textContent = this.debugEnabled ? 'Hide Debug' : 'Show Debug';
                 });
+
+                // Band selection
+                this.bandButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.bandButtons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.selectedBand = btn.dataset.band;
+                        this.bandValue.textContent = btn.textContent;
+                        this.log(`Switched to ${this.selectedBand} band`);
+                        // Reset energy history when switching bands
+                        this.energyHistory = [];
+                    });
+                });
             }
 
             log(msg) {
@@ -489,6 +581,12 @@
 
                     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     this.microphone = this.audioContext.createMediaStreamSource(stream);
+
+                    // Create analyser for frequency bands
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 1024;
+                    this.microphone.connect(this.analyser);
+                    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
 
                     this.meydaAnalyzer = Meyda.createMeydaAnalyzer({
                         audioContext: this.audioContext,
@@ -552,6 +650,7 @@
                 this.nextScheduledTime = 0;
                 this.phraseStartTime = 0;
                 this.accentHistory = [];
+                this.maxBandEnergies = { bass: 0.01, mid: 0.01, high: 0.01 };
                 if (this.countTimer) {
                     clearTimeout(this.countTimer);
                     this.countTimer = null;
@@ -563,6 +662,11 @@
 
                 const now = this.audioContext.currentTime;
                 const rms = features.rms || 0;
+
+                // Get frequency data for band analysis
+                this.analyser.getByteFrequencyData(this.frequencyData);
+                this.calculateBandEnergies();
+                this.updateBandDisplay();
 
                 // Smooth volume
                 this.volumeHistory.push(rms);
@@ -581,10 +685,20 @@
                     // Too quiet - don't detect beats but keep counting if locked
                     return;
                 }
-                this.log(`Vol: ${(volumePercent*100).toFixed(0)}% RMS: ${rms.toFixed(4)}`);
+
+                // Select energy based on chosen band
+                let energy;
+                switch (this.selectedBand) {
+                    case 'bass': energy = this.bandEnergies.bass; break;
+                    case 'mid': energy = this.bandEnergies.mid; break;
+                    case 'high': energy = this.bandEnergies.high; break;
+                    default: energy = rms; // 'all' uses RMS
+                }
+
+                this.log(`Vol: ${(volumePercent*100).toFixed(0)}% Band: ${this.selectedBand} E: ${energy.toFixed(4)}`);
 
                 // Beat detection (always running to track tempo changes)
-                this.energyHistory.push(rms);
+                this.energyHistory.push(energy);
                 if (this.energyHistory.length > 25) this.energyHistory.shift();
                 if (this.energyHistory.length < 4) return;
 
@@ -593,10 +707,69 @@
                 const timeSinceLast = now - this.lastBeatTime;
 
                 // Detect beat
-                if (rms > threshold && timeSinceLast > 0.15) {
-                    this.log(`BEAT! rms=${rms.toFixed(3)} thresh=${threshold.toFixed(3)}`);
-                    this.onBeatDetected(now, rms);
+                if (energy > threshold && timeSinceLast > 0.15) {
+                    this.log(`BEAT! energy=${energy.toFixed(3)} thresh=${threshold.toFixed(3)}`);
+                    this.onBeatDetected(now, energy);
                 }
+            }
+
+            calculateBandEnergies() {
+                const sampleRate = this.audioContext.sampleRate;
+                const binCount = this.analyser.frequencyBinCount;
+                const binWidth = sampleRate / (binCount * 2);
+
+                // Frequency ranges
+                // Bass: 20-250 Hz
+                // Mid: 250-2000 Hz
+                // High: 2000-20000 Hz
+                const bassEnd = Math.floor(250 / binWidth);
+                const midEnd = Math.floor(2000 / binWidth);
+
+                let bassSum = 0, midSum = 0, highSum = 0;
+                let bassCount = 0, midCount = 0, highCount = 0;
+
+                for (let i = 0; i < binCount; i++) {
+                    const value = this.frequencyData[i] / 255; // Normalize to 0-1
+                    if (i < bassEnd) {
+                        bassSum += value;
+                        bassCount++;
+                    } else if (i < midEnd) {
+                        midSum += value;
+                        midCount++;
+                    } else {
+                        highSum += value;
+                        highCount++;
+                    }
+                }
+
+                this.bandEnergies.bass = bassCount > 0 ? bassSum / bassCount : 0;
+                this.bandEnergies.mid = midCount > 0 ? midSum / midCount : 0;
+                this.bandEnergies.high = highCount > 0 ? highSum / highCount : 0;
+
+                // Track max for display scaling
+                if (this.bandEnergies.bass > this.maxBandEnergies.bass) {
+                    this.maxBandEnergies.bass = this.bandEnergies.bass;
+                }
+                if (this.bandEnergies.mid > this.maxBandEnergies.mid) {
+                    this.maxBandEnergies.mid = this.bandEnergies.mid;
+                }
+                if (this.bandEnergies.high > this.maxBandEnergies.high) {
+                    this.maxBandEnergies.high = this.bandEnergies.high;
+                }
+            }
+
+            updateBandDisplay() {
+                const bassPercent = Math.min(100, (this.bandEnergies.bass / Math.max(this.maxBandEnergies.bass, 0.01)) * 100);
+                const midPercent = Math.min(100, (this.bandEnergies.mid / Math.max(this.maxBandEnergies.mid, 0.01)) * 100);
+                const highPercent = Math.min(100, (this.bandEnergies.high / Math.max(this.maxBandEnergies.high, 0.01)) * 100);
+
+                this.bassBar.style.width = bassPercent + '%';
+                this.midBar.style.width = midPercent + '%';
+                this.highBar.style.width = highPercent + '%';
+
+                this.bassPercent.textContent = Math.round(bassPercent) + '%';
+                this.midPercent.textContent = Math.round(midPercent) + '%';
+                this.highPercent.textContent = Math.round(highPercent) + '%';
             }
 
             onBeatDetected(time, energy) {
