@@ -188,6 +188,59 @@
             background: rgba(255,255,255,0.2);
         }
 
+        .freq-band {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 6px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.15s;
+        }
+
+        .freq-band.selected {
+            border-color: #4cd964;
+            background: rgba(76, 217, 100, 0.2);
+        }
+
+        .freq-band:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .band-beat {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            margin: 0 auto 4px;
+            transition: all 0.05s;
+        }
+
+        .band-beat.flash {
+            background: #ffcc00;
+            box-shadow: 0 0 10px #ffcc00;
+        }
+
+        .band-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .band-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4cd964, #ffcc00);
+            transition: width 0.05s;
+        }
+
+        .band-label {
+            font-size: 0.6rem;
+            opacity: 0.8;
+        }
+
         .info-panel {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
@@ -301,47 +354,65 @@
                 </div>
             </div>
 
-            <!-- Frequency band meters -->
-            <div class="volume-container">
-                <div class="volume-label">
-                    <span>Bass (20-250Hz)</span>
-                    <span id="bassPercent">0%</span>
+            <!-- 10 Frequency band grid with beat indicators -->
+            <div class="slider-label" style="margin-bottom: 8px;">
+                <span>Frequency Bands (tap to select)</span>
+                <span class="slider-value" id="selectedBandLabel">All</span>
+            </div>
+            <div id="bandGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 15px;">
+                <div class="freq-band selected" data-band="0">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">20-50</div>
                 </div>
-                <div class="volume-meter" style="cursor: pointer;" id="bassSelect">
-                    <div class="volume-bar" id="bassBar" style="background: #ff6b6b;"></div>
+                <div class="freq-band" data-band="1">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">50-100</div>
+                </div>
+                <div class="freq-band" data-band="2">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">100-200</div>
+                </div>
+                <div class="freq-band" data-band="3">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">200-400</div>
+                </div>
+                <div class="freq-band" data-band="4">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">400-800</div>
+                </div>
+                <div class="freq-band" data-band="5">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">0.8-1.6k</div>
+                </div>
+                <div class="freq-band" data-band="6">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">1.6-3.2k</div>
+                </div>
+                <div class="freq-band" data-band="7">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">3.2-6.4k</div>
+                </div>
+                <div class="freq-band" data-band="8">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">6.4-12k</div>
+                </div>
+                <div class="freq-band" data-band="9">
+                    <div class="band-beat"></div>
+                    <div class="band-bar"><div class="band-fill"></div></div>
+                    <div class="band-label">12-20k</div>
                 </div>
             </div>
-            <div class="volume-container">
-                <div class="volume-label">
-                    <span>Mid (250-2kHz)</span>
-                    <span id="midPercent">0%</span>
-                </div>
-                <div class="volume-meter" style="cursor: pointer;" id="midSelect">
-                    <div class="volume-bar" id="midBar" style="background: #4ecdc4;"></div>
-                </div>
-            </div>
-            <div class="volume-container">
-                <div class="volume-label">
-                    <span>High (2k-20kHz)</span>
-                    <span id="highPercent">0%</span>
-                </div>
-                <div class="volume-meter" style="cursor: pointer;" id="highSelect">
-                    <div class="volume-bar" id="highBar" style="background: #a29bfe;"></div>
-                </div>
-            </div>
-
-            <!-- Frequency band selection -->
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Detect from</span>
-                    <span class="slider-value" id="bandValue">All</span>
-                </div>
-                <div style="display: flex; gap: 8px; margin-top: 6px;">
-                    <button class="band-btn active" data-band="all">All</button>
-                    <button class="band-btn" data-band="bass">Bass</button>
-                    <button class="band-btn" data-band="mid">Mid</button>
-                    <button class="band-btn" data-band="high">High</button>
-                </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                <button class="band-btn active" data-band="all" id="allBandBtn">Use All</button>
             </div>
 
             <!-- Sensitivity slider -->
@@ -437,11 +508,19 @@
                 // Beat detection
                 this.energyHistory = [];
                 this.lastBeatTime = 0;
-                this.selectedBand = 'all'; // 'all', 'bass', 'mid', 'high'
+                this.selectedBand = 0; // 0-9 for specific band, 'all' for combined
                 this.analyser = null;
                 this.frequencyData = null;
-                this.bandEnergies = { bass: 0, mid: 0, high: 0 };
-                this.maxBandEnergies = { bass: 0.01, mid: 0.01, high: 0.01 };
+
+                // 10 frequency bands with individual beat detection
+                this.bandRanges = [
+                    [20, 50], [50, 100], [100, 200], [200, 400], [400, 800],
+                    [800, 1600], [1600, 3200], [3200, 6400], [6400, 12800], [12800, 20000]
+                ];
+                this.bandEnergies = new Array(10).fill(0);
+                this.maxBandEnergies = new Array(10).fill(0.01);
+                this.bandEnergyHistories = Array.from({length: 10}, () => []);
+                this.bandLastBeatTime = new Array(10).fill(0);
 
                 // Tempo tracking
                 this.beatTimes = []; // Actual detected beat times
@@ -492,14 +571,9 @@
                 this.debugEnabled = false;
 
                 // Frequency band UI
-                this.bassBar = document.getElementById('bassBar');
-                this.midBar = document.getElementById('midBar');
-                this.highBar = document.getElementById('highBar');
-                this.bassPercent = document.getElementById('bassPercent');
-                this.midPercent = document.getElementById('midPercent');
-                this.highPercent = document.getElementById('highPercent');
-                this.bandValue = document.getElementById('bandValue');
-                this.bandButtons = document.querySelectorAll('.band-btn');
+                this.freqBands = document.querySelectorAll('.freq-band');
+                this.selectedBandLabel = document.getElementById('selectedBandLabel');
+                this.allBandBtn = document.getElementById('allBandBtn');
 
                 this.bindEvents();
             }
@@ -546,17 +620,28 @@
                     this.toggleDebugBtn.textContent = this.debugEnabled ? 'Hide Debug' : 'Show Debug';
                 });
 
-                // Band selection
-                this.bandButtons.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        this.bandButtons.forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        this.selectedBand = btn.dataset.band;
-                        this.bandValue.textContent = btn.textContent;
-                        this.log(`Switched to ${this.selectedBand} band`);
-                        // Reset energy history when switching bands
+                // Band selection - click on individual bands
+                this.freqBands.forEach(band => {
+                    band.addEventListener('click', () => {
+                        this.freqBands.forEach(b => b.classList.remove('selected'));
+                        band.classList.add('selected');
+                        this.allBandBtn.classList.remove('active');
+                        this.selectedBand = parseInt(band.dataset.band);
+                        const range = this.bandRanges[this.selectedBand];
+                        this.selectedBandLabel.textContent = `${range[0]}-${range[1]}Hz`;
+                        this.log(`Switched to band ${this.selectedBand}: ${range[0]}-${range[1]}Hz`);
                         this.energyHistory = [];
                     });
+                });
+
+                // "Use All" button
+                this.allBandBtn.addEventListener('click', () => {
+                    this.freqBands.forEach(b => b.classList.remove('selected'));
+                    this.allBandBtn.classList.add('active');
+                    this.selectedBand = 'all';
+                    this.selectedBandLabel.textContent = 'All';
+                    this.log('Switched to all bands');
+                    this.energyHistory = [];
                 });
             }
 
@@ -650,7 +735,9 @@
                 this.nextScheduledTime = 0;
                 this.phraseStartTime = 0;
                 this.accentHistory = [];
-                this.maxBandEnergies = { bass: 0.01, mid: 0.01, high: 0.01 };
+                this.maxBandEnergies = new Array(10).fill(0.01);
+                this.bandEnergyHistories = Array.from({length: 10}, () => []);
+                this.bandLastBeatTime = new Array(10).fill(0);
                 if (this.countTimer) {
                     clearTimeout(this.countTimer);
                     this.countTimer = null;
@@ -666,6 +753,7 @@
                 // Get frequency data for band analysis
                 this.analyser.getByteFrequencyData(this.frequencyData);
                 this.calculateBandEnergies();
+                this.detectBandBeats(now);
                 this.updateBandDisplay();
 
                 // Smooth volume
@@ -682,22 +770,18 @@
                 // Check volume threshold
                 const volumePercent = this.smoothedVolume / Math.max(this.maxObservedVolume, 0.01);
                 if (volumePercent < this.volumeThreshold) {
-                    // Too quiet - don't detect beats but keep counting if locked
                     return;
                 }
 
                 // Select energy based on chosen band
                 let energy;
-                switch (this.selectedBand) {
-                    case 'bass': energy = this.bandEnergies.bass; break;
-                    case 'mid': energy = this.bandEnergies.mid; break;
-                    case 'high': energy = this.bandEnergies.high; break;
-                    default: energy = rms; // 'all' uses RMS
+                if (this.selectedBand === 'all') {
+                    energy = rms;
+                } else {
+                    energy = this.bandEnergies[this.selectedBand];
                 }
 
-                this.log(`Vol: ${(volumePercent*100).toFixed(0)}% Band: ${this.selectedBand} E: ${energy.toFixed(4)}`);
-
-                // Beat detection (always running to track tempo changes)
+                // Beat detection for main counter
                 this.energyHistory.push(energy);
                 if (this.energyHistory.length > 25) this.energyHistory.shift();
                 if (this.energyHistory.length < 4) return;
@@ -706,9 +790,8 @@
                 const threshold = avgEnergy * this.sensitivity;
                 const timeSinceLast = now - this.lastBeatTime;
 
-                // Detect beat
                 if (energy > threshold && timeSinceLast > 0.15) {
-                    this.log(`BEAT! energy=${energy.toFixed(3)} thresh=${threshold.toFixed(3)}`);
+                    this.log(`BEAT! band=${this.selectedBand} energy=${energy.toFixed(3)} thresh=${threshold.toFixed(3)}`);
                     this.onBeatDetected(now, energy);
                 }
             }
@@ -718,58 +801,64 @@
                 const binCount = this.analyser.frequencyBinCount;
                 const binWidth = sampleRate / (binCount * 2);
 
-                // Frequency ranges
-                // Bass: 20-250 Hz
-                // Mid: 250-2000 Hz
-                // High: 2000-20000 Hz
-                const bassEnd = Math.floor(250 / binWidth);
-                const midEnd = Math.floor(2000 / binWidth);
+                // Calculate energy for each of the 10 bands
+                for (let b = 0; b < 10; b++) {
+                    const [lowFreq, highFreq] = this.bandRanges[b];
+                    const startBin = Math.floor(lowFreq / binWidth);
+                    const endBin = Math.min(binCount - 1, Math.floor(highFreq / binWidth));
 
-                let bassSum = 0, midSum = 0, highSum = 0;
-                let bassCount = 0, midCount = 0, highCount = 0;
+                    let sum = 0;
+                    let count = 0;
+                    for (let i = startBin; i <= endBin; i++) {
+                        sum += this.frequencyData[i] / 255;
+                        count++;
+                    }
 
-                for (let i = 0; i < binCount; i++) {
-                    const value = this.frequencyData[i] / 255; // Normalize to 0-1
-                    if (i < bassEnd) {
-                        bassSum += value;
-                        bassCount++;
-                    } else if (i < midEnd) {
-                        midSum += value;
-                        midCount++;
-                    } else {
-                        highSum += value;
-                        highCount++;
+                    this.bandEnergies[b] = count > 0 ? sum / count : 0;
+
+                    if (this.bandEnergies[b] > this.maxBandEnergies[b]) {
+                        this.maxBandEnergies[b] = this.bandEnergies[b];
                     }
                 }
+            }
 
-                this.bandEnergies.bass = bassCount > 0 ? bassSum / bassCount : 0;
-                this.bandEnergies.mid = midCount > 0 ? midSum / midCount : 0;
-                this.bandEnergies.high = highCount > 0 ? highSum / highCount : 0;
+            detectBandBeats(now) {
+                // Detect beats in each band independently and flash indicators
+                for (let b = 0; b < 10; b++) {
+                    const energy = this.bandEnergies[b];
 
-                // Track max for display scaling
-                if (this.bandEnergies.bass > this.maxBandEnergies.bass) {
-                    this.maxBandEnergies.bass = this.bandEnergies.bass;
-                }
-                if (this.bandEnergies.mid > this.maxBandEnergies.mid) {
-                    this.maxBandEnergies.mid = this.bandEnergies.mid;
-                }
-                if (this.bandEnergies.high > this.maxBandEnergies.high) {
-                    this.maxBandEnergies.high = this.bandEnergies.high;
+                    // Track energy history per band
+                    this.bandEnergyHistories[b].push(energy);
+                    if (this.bandEnergyHistories[b].length > 15) {
+                        this.bandEnergyHistories[b].shift();
+                    }
+
+                    if (this.bandEnergyHistories[b].length < 4) continue;
+
+                    const avg = this.bandEnergyHistories[b].reduce((a, c) => a + c, 0) / this.bandEnergyHistories[b].length;
+                    const threshold = avg * this.sensitivity;
+                    const timeSinceLast = now - this.bandLastBeatTime[b];
+
+                    // Detect beat in this band
+                    if (energy > threshold && timeSinceLast > 0.12) {
+                        this.bandLastBeatTime[b] = now;
+                        // Flash the indicator
+                        const bandEl = this.freqBands[b];
+                        const beatIndicator = bandEl.querySelector('.band-beat');
+                        beatIndicator.classList.add('flash');
+                        setTimeout(() => beatIndicator.classList.remove('flash'), 100);
+                    }
                 }
             }
 
             updateBandDisplay() {
-                const bassPercent = Math.min(100, (this.bandEnergies.bass / Math.max(this.maxBandEnergies.bass, 0.01)) * 100);
-                const midPercent = Math.min(100, (this.bandEnergies.mid / Math.max(this.maxBandEnergies.mid, 0.01)) * 100);
-                const highPercent = Math.min(100, (this.bandEnergies.high / Math.max(this.maxBandEnergies.high, 0.01)) * 100);
-
-                this.bassBar.style.width = bassPercent + '%';
-                this.midBar.style.width = midPercent + '%';
-                this.highBar.style.width = highPercent + '%';
-
-                this.bassPercent.textContent = Math.round(bassPercent) + '%';
-                this.midPercent.textContent = Math.round(midPercent) + '%';
-                this.highPercent.textContent = Math.round(highPercent) + '%';
+                // Update the energy bar for each band
+                for (let b = 0; b < 10; b++) {
+                    const percent = Math.min(100, (this.bandEnergies[b] / Math.max(this.maxBandEnergies[b], 0.01)) * 100);
+                    const bandEl = this.freqBands[b];
+                    const fill = bandEl.querySelector('.band-fill');
+                    fill.style.width = percent + '%';
+                }
             }
 
             onBeatDetected(time, energy) {
