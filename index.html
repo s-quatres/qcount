@@ -397,19 +397,19 @@
                 <button class="band-btn" id="showAllBandsBtn">Show All Bands</button>
             </div>
 
-            <!-- Sensitivity slider -->
+            <!-- Onset threshold slider -->
             <div class="slider-container">
                 <div class="slider-label">
-                    <span>Beat Sensitivity</span>
-                    <span class="slider-value" id="sensitivityValue">1.3</span>
+                    <span>Onset Threshold</span>
+                    <span class="slider-value" id="sensitivityValue">1.8</span>
                 </div>
-                <input type="range" min="1.0" max="2.0" step="0.1" value="1.3" id="sensitivitySlider">
+                <input type="range" min="1.0" max="3.0" step="0.1" value="1.8" id="sensitivitySlider">
             </div>
 
             <!-- Beats for prediction slider -->
             <div class="slider-container">
                 <div class="slider-label">
-                    <span>Beats to lock tempo</span>
+                    <span>Beats to Lock</span>
                     <span class="slider-value" id="lockBeatsValue">4</span>
                 </div>
                 <input type="range" min="2" max="8" step="1" value="4" id="lockBeatsSlider">
@@ -418,19 +418,10 @@
             <!-- Tolerance slider -->
             <div class="slider-container">
                 <div class="slider-label">
-                    <span>Beat Tolerance</span>
+                    <span>Tempo Tolerance</span>
                     <span class="slider-value" id="toleranceValue">25%</span>
                 </div>
                 <input type="range" min="10" max="50" step="5" value="25" id="toleranceSlider">
-            </div>
-
-            <!-- Volume threshold slider -->
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Min Volume</span>
-                    <span class="slider-value" id="volumeThresholdValue">5%</span>
-                </div>
-                <input type="range" min="1" max="20" step="1" value="5" id="volumeThresholdSlider">
             </div>
         </div>
 
@@ -452,8 +443,7 @@
         <button class="control-button" id="controlButton">Start Listening</button>
 
         <p class="instructions">
-            Learns tempo from first beats, then counts predictively.
-            Only adjusts if timing changes consistently.
+            Tap a band to follow its count. Bands lock when they find consistent beats.
         </p>
 
         <!-- Debug panel -->
@@ -477,10 +467,9 @@
                 this.meydaAnalyzer = null;
 
                 // Settings
-                this.sensitivity = 1.3; // Lower = more sensitive to beats
-                this.lockBeats = 4; // How many consistent beats needed to lock/adjust tempo
+                this.sensitivity = 1.8; // Onset threshold multiplier (higher = less sensitive)
+                this.lockBeats = 4; // How many consistent beats needed to lock tempo
                 this.tolerance = 0.25; // Beat timing tolerance (25%)
-                this.volumeThreshold = 0.05; // Min volume to detect beats (5%)
 
                 // Volume
                 this.volumeHistory = [];
@@ -577,8 +566,6 @@
                 this.lockBeatsValue = document.getElementById('lockBeatsValue');
                 this.toleranceSlider = document.getElementById('toleranceSlider');
                 this.toleranceValue = document.getElementById('toleranceValue');
-                this.volumeThresholdSlider = document.getElementById('volumeThresholdSlider');
-                this.volumeThresholdValue = document.getElementById('volumeThresholdValue');
                 this.beatDots = document.querySelectorAll('.beat-dot');
                 this.debugPanel = document.getElementById('debugPanel');
                 this.debugLog = document.getElementById('debugLog');
@@ -641,11 +628,6 @@
                 this.toleranceSlider.addEventListener('input', (e) => {
                     this.tolerance = parseInt(e.target.value) / 100;
                     this.toleranceValue.textContent = e.target.value + '%';
-                });
-
-                this.volumeThresholdSlider.addEventListener('input', (e) => {
-                    this.volumeThreshold = parseInt(e.target.value) / 100;
-                    this.volumeThresholdValue.textContent = e.target.value + '%';
                 });
 
                 // Select best voice when voices are loaded
@@ -825,44 +807,17 @@
                 this.detectBandBeats(now);
                 this.updateBandDisplay();
 
-                // Smooth volume
+                // Smooth volume for display
                 this.volumeHistory.push(rms);
                 if (this.volumeHistory.length > 10) this.volumeHistory.shift();
                 this.smoothedVolume = this.volumeHistory.reduce((a, b) => a + b, 0) / this.volumeHistory.length;
-
                 if (this.smoothedVolume > this.maxObservedVolume) {
                     this.maxObservedVolume = this.smoothedVolume;
                 }
-
                 this.updateVolumeDisplay();
 
-                // Check volume threshold
-                const volumePercent = this.smoothedVolume / Math.max(this.maxObservedVolume, 0.01);
-                if (volumePercent < this.volumeThreshold) {
-                    return;
-                }
-
-                // Select energy based on chosen band
-                let energy;
-                if (this.selectedBand === 'all') {
-                    energy = rms;
-                } else {
-                    energy = this.bandEnergies[this.selectedBand];
-                }
-
-                // Beat detection for main counter
-                this.energyHistory.push(energy);
-                if (this.energyHistory.length > 25) this.energyHistory.shift();
-                if (this.energyHistory.length < 4) return;
-
-                const avgEnergy = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
-                const threshold = avgEnergy * this.sensitivity;
-                const timeSinceLast = now - this.lastBeatTime;
-
-                if (energy > threshold && timeSinceLast > 0.15) {
-                    this.log(`BEAT! band=${this.selectedBand} energy=${energy.toFixed(3)} thresh=${threshold.toFixed(3)}`);
-                    this.onBeatDetected(now, energy);
-                }
+                // Main counter follows selected band (if locked)
+                this.updateMainCounter(now);
             }
 
             calculateBandEnergies() {
@@ -952,7 +907,7 @@
 
                     // Adaptive threshold based on recent flux activity
                     const avgFlux = this.bandFluxHistories[b].reduce((a, c) => a + c, 0) / this.bandFluxHistories[b].length;
-                    const fluxThreshold = avgFlux * (this.sensitivity + 0.5); // Flux needs higher multiplier
+                    const fluxThreshold = avgFlux * this.sensitivity;
                     const timeSinceLast = now - this.bandLastBeatTime[b];
 
                     // Detect onset using spectral flux - must have significant CHANGE
@@ -1024,6 +979,68 @@
 
                 // Show message if no bands are visible
                 this.noBandsMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+            }
+
+            updateMainCounter(now) {
+                // Main counter follows the selected band
+                if (this.selectedBand === 'all') {
+                    // Find first locked band to follow
+                    let followBand = -1;
+                    for (let b = 0; b < this.numBands; b++) {
+                        if (this.bandTempoLocked[b]) {
+                            followBand = b;
+                            break;
+                        }
+                    }
+                    if (followBand === -1) {
+                        this.modeInfo.textContent = 'Learning...';
+                        return;
+                    }
+                    this.selectedBand = followBand; // Auto-select first locked band
+                    this.freqBands[followBand].classList.add('selected');
+                    this.allBandBtn.classList.remove('active');
+                    this.selectedBandLabel.textContent = this.bandNames[followBand];
+                }
+
+                const b = this.selectedBand;
+                if (!this.bandTempoLocked[b]) {
+                    // Selected band not locked yet
+                    const score = this.bandConsistencyScore[b];
+                    if (score > 0) {
+                        this.modeInfo.textContent = `${score}% consistent`;
+                    } else {
+                        this.modeInfo.textContent = 'Learning...';
+                    }
+                    this.updateStatus('Learning...', 'learning');
+                    return;
+                }
+
+                // Follow this band's count
+                const bpm = Math.round(60 / this.bandLockedInterval[b]);
+                this.bpmValue.textContent = bpm;
+                this.modeInfo.textContent = this.bandNames[b];
+                this.updateStatus('Counting', 'counting');
+
+                // Check if band just ticked
+                const timeSinceLastBeat = now - (this.bandNextBeatTime[b] - this.bandLockedInterval[b]);
+                if (timeSinceLastBeat < 0.05 && timeSinceLastBeat >= 0) {
+                    // Band just triggered - update main display
+                    const count = this.bandBeatCount[b] + 1;
+                    this.currentCountEl.textContent = count;
+                    this.currentCount = this.bandBeatCount[b];
+                    this.updateDots(this.currentCount);
+
+                    // Pulse
+                    this.beatIndicator.classList.remove('accent');
+                    if (count === 1) {
+                        this.beatIndicator.classList.add('accent');
+                    }
+                    this.beatIndicator.classList.add('pulse');
+                    setTimeout(() => this.beatIndicator.classList.remove('pulse'), 80);
+
+                    // Speak
+                    this.speakCount(count);
+                }
             }
 
             tryLockBandTempo(b, now) {
