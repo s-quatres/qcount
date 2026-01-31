@@ -306,6 +306,15 @@
                 </div>
                 <input type="range" min="10" max="50" step="5" value="25" id="toleranceSlider">
             </div>
+
+            <!-- Volume threshold slider -->
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Min Volume</span>
+                    <span class="slider-value" id="volumeThresholdValue">5%</span>
+                </div>
+                <input type="range" min="1" max="20" step="1" value="5" id="volumeThresholdSlider">
+            </div>
         </div>
 
         <div class="info-panel">
@@ -344,6 +353,7 @@
                 this.sensitivity = 1.3; // Lower = more sensitive to beats
                 this.lockBeats = 4; // How many consistent beats needed to lock/adjust tempo
                 this.tolerance = 0.25; // Beat timing tolerance (25%)
+                this.volumeThreshold = 0.05; // Min volume to detect beats (5%)
 
                 // Volume
                 this.volumeHistory = [];
@@ -357,6 +367,7 @@
                 // Tempo tracking
                 this.beatTimes = []; // Actual detected beat times
                 this.beatIntervals = []; // Intervals between beats
+                this.beatEnergies = []; // Energy of each beat for accent detection
                 this.lockedBPM = 0; // Locked tempo
                 this.lockedInterval = 0; // Interval in seconds
 
@@ -388,6 +399,8 @@
                 this.lockBeatsValue = document.getElementById('lockBeatsValue');
                 this.toleranceSlider = document.getElementById('toleranceSlider');
                 this.toleranceValue = document.getElementById('toleranceValue');
+                this.volumeThresholdSlider = document.getElementById('volumeThresholdSlider');
+                this.volumeThresholdValue = document.getElementById('volumeThresholdValue');
                 this.beatDots = document.querySelectorAll('.beat-dot');
 
                 this.bindEvents();
@@ -415,6 +428,11 @@
                 this.toleranceSlider.addEventListener('input', (e) => {
                     this.tolerance = parseInt(e.target.value) / 100;
                     this.toleranceValue.textContent = e.target.value + '%';
+                });
+
+                this.volumeThresholdSlider.addEventListener('input', (e) => {
+                    this.volumeThreshold = parseInt(e.target.value) / 100;
+                    this.volumeThresholdValue.textContent = e.target.value + '%';
                 });
             }
 
@@ -481,6 +499,7 @@
                 this.lastBeatTime = 0;
                 this.beatTimes = [];
                 this.beatIntervals = [];
+                this.beatEnergies = [];
                 this.lockedBPM = 0;
                 this.lockedInterval = 0;
                 this.isTempoLocked = false;
@@ -510,6 +529,13 @@
 
                 this.updateVolumeDisplay();
 
+                // Check volume threshold
+                const volumePercent = this.smoothedVolume / Math.max(this.maxObservedVolume, 0.01);
+                if (volumePercent < this.volumeThreshold) {
+                    // Too quiet - don't detect beats but keep counting if locked
+                    return;
+                }
+
                 // Beat detection (always running to track tempo changes)
                 this.energyHistory.push(rms);
                 if (this.energyHistory.length > 25) this.energyHistory.shift();
@@ -521,25 +547,32 @@
 
                 // Detect beat
                 if (rms > threshold && timeSinceLast > 0.15) {
-                    this.onBeatDetected(now);
+                    this.onBeatDetected(now, rms);
                 }
             }
 
-            onBeatDetected(time) {
-                // Record beat time
+            onBeatDetected(time, energy) {
+                // Record beat time and energy
                 if (this.lastBeatTime > 0) {
                     const interval = time - this.lastBeatTime;
                     if (interval > 0.2 && interval < 1.5) { // 40-300 BPM range
                         this.beatIntervals.push(interval);
                         this.beatTimes.push(time);
+                        this.beatEnergies.push(energy);
 
                         // Keep rolling window
                         if (this.beatIntervals.length > 16) {
                             this.beatIntervals.shift();
                             this.beatTimes.shift();
+                            this.beatEnergies.shift();
                         }
 
                         this.checkTempo();
+
+                        // Check for accent (potential "1" beat) if locked
+                        if (this.isTempoLocked) {
+                            this.checkForAccent(energy);
+                        }
                     }
                 }
                 this.lastBeatTime = time;
@@ -573,22 +606,15 @@
                 }
 
                 if (!isConsistent) {
-                    // Beats are inconsistent - if we were locked, check if we need to unlock
+                    // Beats are inconsistent - but if locked, keep counting!
+                    // Just try to adjust tempo gradually
                     if (this.isTempoLocked) {
-                        // Check if last N beats are consistently different from locked tempo
                         const avgRecent = recentIntervals.reduce((a, b) => a + b, 0) / recentIntervals.length;
-                        const drift = Math.abs(avgRecent - this.lockedInterval) / this.lockedInterval;
-
-                        if (drift > 0.15) { // More than 15% drift
-                            // Tempo has changed significantly - relearn
-                            this.isTempoLocked = false;
-                            if (this.countTimer) {
-                                clearTimeout(this.countTimer);
-                                this.countTimer = null;
-                            }
-                            this.updateStatus('Relearning...', 'learning');
-                            this.modeInfo.textContent = 'Adjusting';
-                        }
+                        // Gradually adjust tempo even when inconsistent
+                        this.lockedInterval = this.lockedInterval * 0.9 + avgRecent * 0.1;
+                        this.lockedBPM = 60 / this.lockedInterval;
+                        this.bpmValue.textContent = Math.round(this.lockedBPM);
+                        this.modeInfo.textContent = 'Adjusting';
                     }
                     return;
                 }
@@ -624,6 +650,28 @@
 
                         // Reschedule if needed
                         this.rescheduleCount();
+                    }
+                }
+            }
+
+            checkForAccent(energy) {
+                // Check if this beat is significantly louder than recent beats
+                if (this.beatEnergies.length < 4) return;
+
+                const recentEnergies = this.beatEnergies.slice(-8);
+                const avgEnergy = recentEnergies.reduce((a, b) => a + b, 0) / recentEnergies.length;
+
+                // If this beat is 40% louder than average, it might be a "1"
+                if (energy > avgEnergy * 1.4) {
+                    // This looks like an accent - consider shifting phrase start
+                    // But only if we're not already close to a "1"
+                    const currentPos = this.currentCount; // 0-7
+                    if (currentPos !== 0 && currentPos !== 7) {
+                        // We detected an accent but we're not on beat 1
+                        // Shift phrase start time to realign
+                        this.phraseStartTime = this.audioContext.currentTime;
+                        this.currentCount = 0;
+                        this.modeInfo.textContent = 'Realigned';
                     }
                 }
             }
