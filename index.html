@@ -399,14 +399,13 @@
         <h1>8-Count</h1>
         <p class="subtitle">Load songs, detect beats, count along</p>
 
-        <!-- Song Selection Panel -->
+        <!-- File Selection Panel -->
         <div class="panel">
-            <div class="panel-header" style="font-weight: 600; margin-bottom: 12px;">Select a Song</div>
-            <div class="song-list" id="songList"></div>
-            <div class="file-input-wrapper" style="margin-top: 15px;">
-                <div class="file-btn" id="fileBtn" style="padding: 10px; font-size: 0.85rem;">+ Add more MP3 files</div>
+            <div class="file-input-wrapper">
+                <div class="file-btn" id="fileBtn">Click or drop MP3 files here</div>
                 <input type="file" id="fileInput" accept="audio/*" multiple>
             </div>
+            <div class="song-list" id="songList"></div>
         </div>
 
         <!-- Player Panel (hidden until song selected) -->
@@ -472,7 +471,7 @@
         </div>
 
         <p class="instructions">
-            Select a song to analyze. The app will detect beats, find 8-count phrases, and count along with the music.
+            Select MP3 files to analyze. The app will detect beats, find 8-count phrases, and count along with the music.
         </p>
     </div>
 
@@ -486,16 +485,10 @@
     </div>
 
     <script>
-        // Songs available in the mp3 folder
-        const FOLDER_SONGS = [
-            '03 My Baby Just Cares For Me.mp3',
-            'whydontudoright.mp3'
-        ];
-
         class BeatCounterApp {
             constructor() {
                 this.audioContext = null;
-                this.songs = []; // {name, url, file, audioBuffer, beats, bpm, processed}
+                this.songs = []; // {name, file, audioBuffer, beats, bpm, processed}
                 this.currentSong = null;
                 this.isPlaying = false;
                 this.sourceNode = null;
@@ -539,28 +532,6 @@
 
                 this.bindEvents();
                 this.selectBestVoice();
-                this.loadFolderSongs();
-            }
-
-            loadFolderSongs() {
-                // Add predefined songs from the mp3 folder
-                for (const filename of FOLDER_SONGS) {
-                    // Clean up display name: remove .mp3 and leading track numbers
-                    let displayName = filename.replace('.mp3', '');
-                    displayName = displayName.replace(/^\d+\s*/, ''); // Remove leading numbers
-
-                    const song = {
-                        name: displayName,
-                        url: 'mp3/' + encodeURIComponent(filename),
-                        file: null,
-                        audioBuffer: null,
-                        beats: [],
-                        bpm: 0,
-                        processed: false
-                    };
-                    this.songs.push(song);
-                }
-                this.renderSongList();
             }
 
             bindEvents() {
@@ -690,17 +661,8 @@
                 this.showProcessing('Loading audio...', song.name);
 
                 try {
-                    // Load audio buffer - from URL or file
-                    let arrayBuffer;
-                    if (song.url) {
-                        const response = await fetch(song.url);
-                        if (!response.ok) {
-                            throw new Error(`Failed to load ${song.name}`);
-                        }
-                        arrayBuffer = await response.arrayBuffer();
-                    } else {
-                        arrayBuffer = await song.file.arrayBuffer();
-                    }
+                    // Load audio buffer
+                    const arrayBuffer = await song.file.arrayBuffer();
                     song.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
                     this.showProcessing('Analyzing beats...', 'This may take a moment');

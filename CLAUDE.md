@@ -1,16 +1,10 @@
 # 8-Count Beat Counter App
 
 ## Overview
-A web-based app that loads MP3 files from the mp3/ folder, analyzes them offline to detect beats, validates 8-count phrase distribution, and plays the music with synchronized voice counting. Designed for dancers practicing with swing music.
+A web-based app that loads MP3 files, analyzes them offline to detect beats, validates 8-count phrase distribution, and plays the music with synchronized voice counting. Designed for dancers practicing with swing music.
 
 ## File Structure
 - `index.html` - Single file containing all HTML, CSS, and JavaScript
-- `mp3/` - Folder containing MP3 files to analyze
-
-## Adding Songs
-1. Add MP3 files to the `mp3/` folder
-2. Update the `FOLDER_SONGS` array in index.html with the exact filenames
-3. Commit and push to deploy
 
 ## Architecture
 
@@ -68,10 +62,9 @@ The app validates and corrects beat distribution:
 
 ## User Interface
 
-### Song Selection
-- Songs from mp3/ folder appear automatically
-- Click a song to process and play
-- Can also add more files via file picker
+### File Selection
+- Click or drag-and-drop MP3 files
+- Multiple files supported
 - Song list shows processing status and BPM
 
 ### Player Controls
