@@ -806,57 +806,126 @@
             }
 
             validate8Counts(beats, bpm, duration) {
-                // Use actual detected beats as anchors - only fill small gaps
-                // This prevents drift over the course of the song
-                const expectedInterval = 60 / bpm;
+                // Thorough analysis: create a plan and fit it to the actual beats
 
                 if (beats.length < 16) {
                     console.log('Too few beats detected, generating from BPM');
                     return this.generateBeatsFromBpm(bpm, duration);
                 }
 
-                console.log(`Starting with ${beats.length} detected beats at ~${bpm} BPM`);
+                console.log(`\n=== BEAT PLAN ANALYSIS ===`);
+                console.log(`Detected ${beats.length} beats, initial BPM estimate: ${bpm}`);
 
-                // Build final beat list using actual detected beats as anchors
+                // Step 1: Refine BPM by analyzing intervals across the whole song
+                const intervals = [];
+                for (let i = 1; i < beats.length; i++) {
+                    intervals.push(beats[i].time - beats[i - 1].time);
+                }
+
+                // Filter to reasonable intervals (40-200 BPM range)
+                const validIntervals = intervals.filter(i => i > 0.3 && i < 1.5);
+
+                // Check for double-time: if most intervals are around half the expected
+                const expectedInterval = 60 / bpm;
+                const halfIntervals = validIntervals.filter(i => i < expectedInterval * 0.7);
+                const normalIntervals = validIntervals.filter(i => i >= expectedInterval * 0.7 && i <= expectedInterval * 1.3);
+
+                let refinedInterval = expectedInterval;
+                if (halfIntervals.length > normalIntervals.length * 2) {
+                    // Detected at double tempo, halve it
+                    refinedInterval = expectedInterval / 2;
+                    console.log(`Detected double-time, adjusting interval from ${expectedInterval.toFixed(3)}s to ${refinedInterval.toFixed(3)}s`);
+                } else if (normalIntervals.length > 10) {
+                    // Use median of normal intervals
+                    normalIntervals.sort((a, b) => a - b);
+                    refinedInterval = normalIntervals[Math.floor(normalIntervals.length / 2)];
+                }
+
+                const refinedBpm = Math.round(60 / refinedInterval);
+                console.log(`Refined BPM: ${refinedBpm} (interval: ${refinedInterval.toFixed(3)}s)`);
+
+                // Step 2: Find the best starting point by testing different offsets
+                const startTime = beats[0].time;
+                const endTime = duration - 0.5;
+
+                // Test multiple start offsets to find best alignment
+                let bestStartOffset = 0;
+                let bestMatchScore = -Infinity;
+
+                for (let testOffset = 0; testOffset < refinedInterval; testOffset += refinedInterval / 16) {
+                    let score = 0;
+                    let gridTime = startTime + testOffset;
+
+                    while (gridTime < Math.min(endTime, startTime + 30)) { // Test first 30 seconds
+                        // Find nearest detected beat
+                        let minDist = Infinity;
+                        for (const beat of beats) {
+                            const dist = Math.abs(beat.time - gridTime);
+                            if (dist < minDist) minDist = dist;
+                        }
+                        // Score based on how close the grid point is to a detected beat
+                        if (minDist < refinedInterval * 0.25) {
+                            score += 1 - (minDist / refinedInterval);
+                        }
+                        gridTime += refinedInterval;
+                    }
+
+                    if (score > bestMatchScore) {
+                        bestMatchScore = score;
+                        bestStartOffset = testOffset;
+                    }
+                }
+
+                console.log(`Best start offset: ${bestStartOffset.toFixed(3)}s (score: ${bestMatchScore.toFixed(2)})`);
+
+                // Step 3: Create the beat grid with the refined parameters
                 const finalBeats = [];
+                let gridTime = startTime + bestStartOffset;
 
-                for (let i = 0; i < beats.length; i++) {
-                    const currentBeat = beats[i];
+                // If first grid beat is before song start, advance it
+                while (gridTime < 0) {
+                    gridTime += refinedInterval;
+                }
 
-                    // Add the actual detected beat
-                    finalBeats.push({ time: currentBeat.time, energy: currentBeat.energy });
+                // Step 4: For each grid position, snap to nearest detected beat if close enough
+                while (gridTime < endTime) {
+                    // Find nearest detected beat within tolerance
+                    let nearestBeat = null;
+                    let nearestDist = Infinity;
 
-                    // Check if there's a gap before the next beat that needs filling
-                    if (i < beats.length - 1) {
-                        const nextBeat = beats[i + 1];
-                        const gap = nextBeat.time - currentBeat.time;
+                    for (const beat of beats) {
+                        const dist = Math.abs(beat.time - gridTime);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestBeat = beat;
+                        }
+                    }
 
-                        // If gap is more than 1.5x expected interval, fill in missing beats
-                        if (gap > expectedInterval * 1.5) {
-                            const missingCount = Math.round(gap / expectedInterval) - 1;
-                            const actualGapInterval = gap / (missingCount + 1);
+                    // Snap to detected beat if within 20% of interval, otherwise use grid
+                    if (nearestDist < refinedInterval * 0.2 && nearestBeat) {
+                        finalBeats.push({ time: nearestBeat.time, energy: nearestBeat.energy });
+                    } else {
+                        finalBeats.push({ time: gridTime, energy: 0.5 });
+                    }
 
-                            for (let j = 1; j <= missingCount; j++) {
-                                finalBeats.push({
-                                    time: currentBeat.time + actualGapInterval * j,
-                                    energy: 0.5
-                                });
-                            }
+                    gridTime += refinedInterval;
+                }
+
+                // Step 5: Verify the plan matches the song
+                let matchedBeats = 0;
+                for (const finalBeat of finalBeats) {
+                    for (const detectedBeat of beats) {
+                        if (Math.abs(finalBeat.time - detectedBeat.time) < refinedInterval * 0.15) {
+                            matchedBeats++;
+                            break;
                         }
                     }
                 }
 
-                // Extend to end of song if needed (using last detected beat as anchor)
-                const lastBeat = finalBeats[finalBeats.length - 1];
-                const endTime = duration - 0.5;
-                let t = lastBeat.time + expectedInterval;
+                const matchRate = (matchedBeats / finalBeats.length * 100).toFixed(1);
+                console.log(`Plan has ${finalBeats.length} beats, ${matchedBeats} matched to detected (${matchRate}%)`);
+                console.log(`=== END ANALYSIS ===\n`);
 
-                while (t < endTime) {
-                    finalBeats.push({ time: t, energy: 0.5 });
-                    t += expectedInterval;
-                }
-
-                console.log(`Validated to ${finalBeats.length} beats (anchored to ${beats.length} detected)`);
                 return finalBeats;
             }
 
