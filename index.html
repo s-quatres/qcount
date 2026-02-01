@@ -680,7 +680,7 @@
                     this.showProcessing('Finding phrase alignment...', 'Detecting accented beats');
 
                     // Find where "1" should fall based on accent patterns
-                    song.phraseOffset = this.findPhraseAlignment(song.beats);
+                    song.phraseOffset = this.findPhraseAlignment(song.beats, song.audioBuffer);
 
                     song.processed = true;
                     this.hideProcessing();
@@ -891,16 +891,36 @@
                 return beats;
             }
 
-            findPhraseAlignment(beats) {
+            findPhraseAlignment(beats, audioBuffer) {
                 // Find the best offset (0-7) so that "1" falls on accented beats
-                // Accented beats in swing/jazz typically have higher energy
+                // Measure actual RMS energy at each beat position from the audio
 
                 if (beats.length < 16) {
                     return 0; // Not enough beats to analyze
                 }
 
+                const channelData = audioBuffer.getChannelData(0);
+                const sampleRate = audioBuffer.sampleRate;
+
+                // Measure RMS energy at each beat (50ms window centered on beat)
+                const windowSamples = Math.floor(sampleRate * 0.05);
+                const beatEnergies = [];
+
+                for (const beat of beats) {
+                    const centerSample = Math.floor(beat.time * sampleRate);
+                    const startSample = Math.max(0, centerSample - windowSamples / 2);
+                    const endSample = Math.min(channelData.length, centerSample + windowSamples / 2);
+
+                    let energy = 0;
+                    for (let i = startSample; i < endSample; i++) {
+                        energy += channelData[i] * channelData[i];
+                    }
+                    energy = Math.sqrt(energy / (endSample - startSample));
+                    beatEnergies.push(energy);
+                }
+
                 // Calculate average energy
-                const avgEnergy = beats.reduce((sum, b) => sum + b.energy, 0) / beats.length;
+                const avgEnergy = beatEnergies.reduce((sum, e) => sum + e, 0) / beatEnergies.length;
 
                 // Score each possible offset (0-7)
                 // Higher score = stronger beats fall on position 0 (beat "1")
@@ -908,24 +928,27 @@
 
                 for (let offset = 0; offset < 8; offset++) {
                     let score = 0;
-                    let count = 0;
 
-                    for (let i = 0; i < beats.length; i++) {
+                    for (let i = 0; i < beatEnergies.length; i++) {
                         const positionInPhrase = (i + offset) % 8;
-                        const energy = beats[i].energy;
+                        const energy = beatEnergies[i];
+                        const normalizedEnergy = energy / avgEnergy;
 
                         // Weight by position - beat 1 should be strongest, beat 5 often strong too
                         if (positionInPhrase === 0) {
                             // This would be "1" - should have high energy
-                            score += energy / avgEnergy;
-                            count++;
+                            score += normalizedEnergy * 2.0;
                         } else if (positionInPhrase === 4) {
                             // This would be "5" - often accented in swing
-                            score += (energy / avgEnergy) * 0.5;
+                            score += normalizedEnergy * 1.0;
+                        } else if (positionInPhrase === 2 || positionInPhrase === 6) {
+                            // Beats 3 and 7 - sometimes accented
+                            score += normalizedEnergy * 0.3;
                         }
+                        // Other positions contribute less
                     }
 
-                    scores.push({ offset, score: count > 0 ? score / count : 0 });
+                    scores.push({ offset, score });
                 }
 
                 // Find offset with highest score
@@ -933,7 +956,7 @@
                 const bestOffset = scores[0].offset;
 
                 console.log(`Phrase alignment scores:`, scores.map(s => `${s.offset}:${s.score.toFixed(2)}`).join(', '));
-                console.log(`Best phrase offset: ${bestOffset} (beat 1 starts at beat index ${(8 - bestOffset) % 8})`);
+                console.log(`Best phrase offset: ${bestOffset}`);
 
                 return bestOffset;
             }
