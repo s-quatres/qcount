@@ -488,7 +488,7 @@
         class BeatCounterApp {
             constructor() {
                 this.audioContext = null;
-                this.songs = []; // {name, file, audioBuffer, beats, bpm, processed}
+                this.songs = []; // {name, file, audioBuffer, beats, bpm, phraseOffset, processed}
                 this.currentSong = null;
                 this.isPlaying = false;
                 this.sourceNode = null;
@@ -676,6 +676,11 @@
 
                     // Validate and adjust beats for proper 8-count distribution
                     song.beats = this.validate8Counts(song.beats, song.bpm, song.audioBuffer.duration);
+
+                    this.showProcessing('Finding phrase alignment...', 'Detecting accented beats');
+
+                    // Find where "1" should fall based on accent patterns
+                    song.phraseOffset = this.findPhraseAlignment(song.beats);
 
                     song.processed = true;
                     this.hideProcessing();
@@ -886,6 +891,53 @@
                 return beats;
             }
 
+            findPhraseAlignment(beats) {
+                // Find the best offset (0-7) so that "1" falls on accented beats
+                // Accented beats in swing/jazz typically have higher energy
+
+                if (beats.length < 16) {
+                    return 0; // Not enough beats to analyze
+                }
+
+                // Calculate average energy
+                const avgEnergy = beats.reduce((sum, b) => sum + b.energy, 0) / beats.length;
+
+                // Score each possible offset (0-7)
+                // Higher score = stronger beats fall on position 0 (beat "1")
+                const scores = [];
+
+                for (let offset = 0; offset < 8; offset++) {
+                    let score = 0;
+                    let count = 0;
+
+                    for (let i = 0; i < beats.length; i++) {
+                        const positionInPhrase = (i + offset) % 8;
+                        const energy = beats[i].energy;
+
+                        // Weight by position - beat 1 should be strongest, beat 5 often strong too
+                        if (positionInPhrase === 0) {
+                            // This would be "1" - should have high energy
+                            score += energy / avgEnergy;
+                            count++;
+                        } else if (positionInPhrase === 4) {
+                            // This would be "5" - often accented in swing
+                            score += (energy / avgEnergy) * 0.5;
+                        }
+                    }
+
+                    scores.push({ offset, score: count > 0 ? score / count : 0 });
+                }
+
+                // Find offset with highest score
+                scores.sort((a, b) => b.score - a.score);
+                const bestOffset = scores[0].offset;
+
+                console.log(`Phrase alignment scores:`, scores.map(s => `${s.offset}:${s.score.toFixed(2)}`).join(', '));
+                console.log(`Best phrase offset: ${bestOffset} (beat 1 starts at beat index ${(8 - bestOffset) % 8})`);
+
+                return bestOffset;
+            }
+
             updatePlayerUI() {
                 const song = this.currentSong;
                 if (!song) return;
@@ -1030,6 +1082,7 @@
                 this.clearScheduledCounts();
 
                 const beats = this.currentSong.beats;
+                const phraseOffset = this.currentSong.phraseOffset || 0;
                 const audioContextTime = this.audioContext.currentTime;
 
                 for (let i = 0; i < beats.length; i++) {
@@ -1038,7 +1091,8 @@
 
                     if (beatTime < 0) continue; // Skip past beats
 
-                    const count = (i % 8) + 1; // 1-8
+                    // Apply phrase offset so "1" falls on accented beats
+                    const count = ((i + phraseOffset) % 8) + 1; // 1-8
                     const triggerTime = audioContextTime + beatTime;
 
                     // Schedule the count
