@@ -806,78 +806,58 @@
             }
 
             validate8Counts(beats, bpm, duration) {
-                // Expected interval between beats
+                // Use actual detected beats as anchors - only fill small gaps
+                // This prevents drift over the course of the song
                 const expectedInterval = 60 / bpm;
 
-                // If we have very few beats, generate them from BPM
                 if (beats.length < 16) {
                     console.log('Too few beats detected, generating from BPM');
                     return this.generateBeatsFromBpm(bpm, duration);
                 }
 
-                // Find the most likely starting point for phrase alignment
-                // by looking at beat energies (louder beats often fall on 1)
+                console.log(`Starting with ${beats.length} detected beats at ~${bpm} BPM`);
 
-                // Calculate average interval from detected beats
-                let totalInterval = 0;
-                let count = 0;
-                for (let i = 1; i < beats.length; i++) {
-                    const interval = beats[i].time - beats[i - 1].time;
-                    if (Math.abs(interval - expectedInterval) / expectedInterval < 0.3) {
-                        totalInterval += interval;
-                        count++;
-                    }
-                }
-
-                const actualInterval = count > 0 ? totalInterval / count : expectedInterval;
-                const actualBpm = Math.round(60 / actualInterval);
-
-                console.log(`Detected ${beats.length} beats, calculated interval: ${actualInterval.toFixed(3)}s (${actualBpm} BPM)`);
-
-                // Check beat distribution - are beats evenly spaced?
-                const toleratedBeats = [];
-                let expectedTime = beats[0].time;
+                // Build final beat list using actual detected beats as anchors
+                const finalBeats = [];
 
                 for (let i = 0; i < beats.length; i++) {
-                    const beat = beats[i];
+                    const currentBeat = beats[i];
 
-                    // Find nearest expected beat time
-                    while (expectedTime < beat.time - actualInterval * 0.4) {
-                        expectedTime += actualInterval;
+                    // Add the actual detected beat
+                    finalBeats.push({ time: currentBeat.time, energy: currentBeat.energy });
+
+                    // Check if there's a gap before the next beat that needs filling
+                    if (i < beats.length - 1) {
+                        const nextBeat = beats[i + 1];
+                        const gap = nextBeat.time - currentBeat.time;
+
+                        // If gap is more than 1.5x expected interval, fill in missing beats
+                        if (gap > expectedInterval * 1.5) {
+                            const missingCount = Math.round(gap / expectedInterval) - 1;
+                            const actualGapInterval = gap / (missingCount + 1);
+
+                            for (let j = 1; j <= missingCount; j++) {
+                                finalBeats.push({
+                                    time: currentBeat.time + actualGapInterval * j,
+                                    energy: 0.5
+                                });
+                            }
+                        }
                     }
-
-                    // Is this beat close to an expected time?
-                    if (Math.abs(beat.time - expectedTime) < actualInterval * 0.3) {
-                        toleratedBeats.push({ time: expectedTime, energy: beat.energy });
-                        expectedTime += actualInterval;
-                    }
                 }
 
-                // If we lost too many beats, regenerate from BPM
-                if (toleratedBeats.length < beats.length * 0.5) {
-                    console.log('Beat timing too inconsistent, generating from BPM');
-                    return this.generateBeatsFromBpm(bpm, duration, beats[0].time);
+                // Extend to end of song if needed (using last detected beat as anchor)
+                const lastBeat = finalBeats[finalBeats.length - 1];
+                const endTime = duration - 0.5;
+                let t = lastBeat.time + expectedInterval;
+
+                while (t < endTime) {
+                    finalBeats.push({ time: t, energy: 0.5 });
+                    t += expectedInterval;
                 }
 
-                // Fill in any missing beats
-                const filledBeats = [];
-                const startTime = toleratedBeats[0].time;
-                const endTime = duration - 0.5; // Stop 0.5s before end
-
-                for (let t = startTime; t < endTime; t += actualInterval) {
-                    // Check if we have a detected beat near this time
-                    const nearBeat = toleratedBeats.find(b =>
-                        Math.abs(b.time - t) < actualInterval * 0.3
-                    );
-
-                    filledBeats.push({
-                        time: nearBeat ? nearBeat.time : t,
-                        energy: nearBeat ? nearBeat.energy : 0.5
-                    });
-                }
-
-                console.log(`Validated to ${filledBeats.length} beats`);
-                return filledBeats;
+                console.log(`Validated to ${finalBeats.length} beats (anchored to ${beats.length} detected)`);
+                return finalBeats;
             }
 
             generateBeatsFromBpm(bpm, duration, startTime = 0.5) {
