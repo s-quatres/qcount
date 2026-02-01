@@ -18,13 +18,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             padding: 20px;
             color: white;
         }
 
         .container {
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
         }
 
@@ -42,9 +41,112 @@
             font-size: 0.9rem;
         }
 
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px dashed rgba(255,255,255,0.4);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .file-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.6);
+        }
+
+        .song-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .song-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .song-item:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .song-item.selected {
+            background: rgba(76, 217, 100, 0.3);
+            border: 1px solid rgba(76, 217, 100, 0.6);
+        }
+
+        .song-item.processing {
+            background: rgba(255, 204, 0, 0.3);
+            border: 1px solid rgba(255, 204, 0, 0.6);
+        }
+
+        .song-item.ready {
+            background: rgba(76, 217, 100, 0.2);
+        }
+
+        .song-name {
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .song-status {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-left: 10px;
+        }
+
+        .song-bpm {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4cd964;
+            margin-left: 10px;
+        }
+
+        /* Beat indicator */
         .beat-indicator {
-            width: 180px;
-            height: 180px;
+            width: 160px;
+            height: 160px;
             margin: 0 auto 20px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.1);
@@ -69,27 +171,23 @@
             border-color: rgba(255, 215, 0, 0.8);
         }
 
-        .beat-indicator.waiting {
-            border-color: rgba(255, 204, 0, 0.6);
-        }
-
         /* Beat dots */
         .phrase-display {
             display: flex;
             justify-content: center;
-            gap: 6px;
+            gap: 8px;
             margin-bottom: 20px;
         }
 
         .beat-dot {
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             font-weight: bold;
             transition: all 0.1s ease;
         }
@@ -103,21 +201,115 @@
             border: 2px solid rgba(255, 215, 0, 0.8);
         }
 
-        /* Sliders */
-        .slider-container {
+        /* Progress bar */
+        .progress-container {
             margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4cd964, #5ac8fa);
+            border-radius: 4px;
+            transition: width 0.1s linear;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .play-btn {
+            background: #4cd964;
+            color: white;
+        }
+
+        .play-btn:hover {
+            background: #3cb553;
+        }
+
+        .play-btn:disabled {
+            background: rgba(255,255,255,0.2);
+            cursor: not-allowed;
+        }
+
+        .play-btn.playing {
+            background: #ff9500;
+        }
+
+        .stop-btn {
+            background: #ff3b30;
+            color: white;
+            flex: 0.5;
+        }
+
+        .stop-btn:hover {
+            background: #e0352b;
+        }
+
+        /* Info panel */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Volume slider */
+        .slider-container {
+            margin-top: 15px;
         }
 
         .slider-label {
             display: flex;
             justify-content: space-between;
-            font-size: 0.75rem;
-            margin-bottom: 6px;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
             opacity: 0.9;
-        }
-
-        .slider-value {
-            font-weight: 600;
         }
 
         input[type="range"] {
@@ -131,1220 +323,757 @@
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: white;
             cursor: pointer;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
 
-        /* Volume meter */
-        .volume-container {
-            margin-bottom: 15px;
-        }
-
-        .volume-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            margin-bottom: 5px;
-            opacity: 0.8;
-        }
-
-        .volume-meter {
-            height: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .volume-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #4cd964, #ffcc00, #ff3b30);
-            border-radius: 3px;
-            transition: width 0.05s ease;
-        }
-
-        .band-btn {
-            flex: 1;
-            padding: 8px 4px;
-            border: 1px solid rgba(255,255,255,0.3);
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .band-btn.active {
-            background: rgba(255,255,255,0.3);
-            border-color: rgba(255,255,255,0.6);
-        }
-
-        .band-btn:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .freq-band {
-            background: rgba(255,255,255,0.1);
-            border-radius: 6px;
-            padding: 4px;
-            text-align: center;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: all 0.15s;
-        }
-
-        .freq-band.selected {
-            border-color: #4cd964;
-            background: rgba(76, 217, 100, 0.2);
-        }
-
-        .freq-band.locked {
-            border-color: #ffcc00;
-            background: rgba(255, 204, 0, 0.15);
-        }
-
-        .freq-band.locked.selected {
-            border-color: #4cd964;
-            background: rgba(76, 217, 100, 0.25);
-        }
-
-        .freq-band:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .freq-band.hidden {
-            display: none;
-        }
-
-        .freq-band .band-score {
-            font-size: 0.45rem;
-            opacity: 0.6;
-            margin-top: 1px;
-        }
-
-        .band-beat {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            margin: 0 auto 3px;
-            transition: all 0.05s;
+        /* Processing overlay */
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.6rem;
-            font-weight: bold;
-            color: rgba(255,255,255,0.7);
+            z-index: 100;
+            display: none;
         }
 
-        .band-beat.flash {
-            background: #ffcc00;
-            box-shadow: 0 0 8px #ffcc00;
-            color: #333;
-        }
-
-        .band-bar {
-            height: 3px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 2px;
-        }
-
-        .band-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #4cd964, #ffcc00);
-            transition: width 0.05s;
-        }
-
-        .band-label {
-            font-size: 0.5rem;
-            opacity: 0.8;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        .info-panel {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-        }
-
-        .info-row {
+        .processing-overlay.active {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+        }
+
+        .processing-content {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .processing-text {
+            font-size: 1.1rem;
             margin-bottom: 10px;
         }
 
-        .info-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .info-label {
-            font-size: 0.8rem;
-            opacity: 0.8;
-        }
-
-        .info-value {
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .status-stopped { background: rgba(255, 255, 255, 0.2); }
-        .status-waiting { background: rgba(255, 204, 0, 0.3); border: 1px solid rgba(255, 204, 0, 0.6); }
-        .status-learning { background: rgba(100, 149, 237, 0.3); border: 1px solid rgba(100, 149, 237, 0.6); }
-        .status-counting { background: rgba(76, 217, 100, 0.3); border: 1px solid rgba(76, 217, 100, 0.6); }
-
-        .control-button {
-            width: 100%;
-            padding: 18px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 16px;
-            background: white;
-            color: #667eea;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        }
-
-        .control-button:active {
-            transform: scale(0.98);
-        }
-
-        .control-button.listening {
-            background: #ff3b30;
-            color: white;
+        .processing-detail {
+            font-size: 0.85rem;
+            opacity: 0.7;
         }
 
         .instructions {
             text-align: center;
-            margin-top: 15px;
             font-size: 0.75rem;
             opacity: 0.7;
             line-height: 1.4;
+            margin-top: 15px;
         }
 
         @media (max-width: 480px) {
             h1 { font-size: 1.5rem; }
-            .beat-indicator { width: 140px; height: 140px; font-size: 3rem; }
-            .beat-dot { width: 25px; height: 25px; font-size: 0.6rem; }
+            .beat-indicator { width: 120px; height: 120px; font-size: 3rem; }
+            .beat-dot { width: 28px; height: 28px; font-size: 0.7rem; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>8-Count</h1>
-        <p class="subtitle">Predictive counting with tempo lock</p>
+        <p class="subtitle">Load songs, detect beats, count along</p>
 
-        <div class="beat-indicator" id="beatIndicator">
-            <span id="currentCount">-</span>
+        <!-- File Selection Panel -->
+        <div class="panel">
+            <div class="file-input-wrapper">
+                <div class="file-btn" id="fileBtn">Click or drop MP3 files here</div>
+                <input type="file" id="fileInput" accept="audio/*" multiple>
+            </div>
+            <div class="song-list" id="songList"></div>
         </div>
 
-        <div class="phrase-display" id="phraseDisplay">
-            <div class="beat-dot accent-beat" data-beat="1">1</div>
-            <div class="beat-dot" data-beat="2">2</div>
-            <div class="beat-dot" data-beat="3">3</div>
-            <div class="beat-dot" data-beat="4">4</div>
-            <div class="beat-dot" data-beat="5">5</div>
-            <div class="beat-dot" data-beat="6">6</div>
-            <div class="beat-dot" data-beat="7">7</div>
-            <div class="beat-dot" data-beat="8">8</div>
-        </div>
+        <!-- Player Panel (hidden until song selected) -->
+        <div class="panel" id="playerPanel" style="display: none;">
+            <div class="beat-indicator" id="beatIndicator">
+                <span id="currentCount">-</span>
+            </div>
 
-        <div id="controlsContainer" style="display: none;">
-            <!-- Volume meter -->
-            <div class="volume-container">
-                <div class="volume-label">
-                    <span>Volume</span>
-                    <span id="volumePercent">0%</span>
+            <div class="phrase-display" id="phraseDisplay">
+                <div class="beat-dot accent-beat" data-beat="1">1</div>
+                <div class="beat-dot" data-beat="2">2</div>
+                <div class="beat-dot" data-beat="3">3</div>
+                <div class="beat-dot" data-beat="4">4</div>
+                <div class="beat-dot" data-beat="5">5</div>
+                <div class="beat-dot" data-beat="6">6</div>
+                <div class="beat-dot" data-beat="7">7</div>
+                <div class="beat-dot" data-beat="8">8</div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
                 </div>
-                <div class="volume-meter">
-                    <div class="volume-bar" id="volumeBar"></div>
+                <div class="time-display">
+                    <span id="currentTime">0:00</span>
+                    <span id="totalTime">0:00</span>
                 </div>
             </div>
 
-            <!-- 20 Frequency band grid with beat indicators -->
-            <div class="slider-label" style="margin-bottom: 8px;">
-                <span>Frequency Bands (tap to select)</span>
-                <span class="slider-value" id="selectedBandLabel">All</span>
-            </div>
-            <div id="bandGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px;"></div>
-            <div id="noBandsMsg" style="text-align: center; font-size: 0.75rem; opacity: 0.7; margin-bottom: 8px; display: none;">
-                Listening for beats...
-            </div>
-            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                <button class="band-btn active" data-band="all" id="allBandBtn">Use All</button>
-                <button class="band-btn" id="showAllBandsBtn">Show All Bands</button>
+            <div class="controls">
+                <button class="control-btn play-btn" id="playBtn" disabled>Process First</button>
+                <button class="control-btn stop-btn" id="stopBtn">Stop</button>
             </div>
 
-            <!-- Onset threshold slider -->
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Onset Threshold</span>
-                    <span class="slider-value" id="sensitivityValue">1.8</span>
-                </div>
-                <input type="range" min="1.0" max="3.0" step="0.1" value="1.8" id="sensitivitySlider">
-            </div>
-
-            <!-- Beats for prediction slider -->
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Beats to Lock</span>
-                    <span class="slider-value" id="lockBeatsValue">4</span>
-                </div>
-                <input type="range" min="2" max="8" step="1" value="4" id="lockBeatsSlider">
-            </div>
-
-            <!-- Tolerance slider -->
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Tempo Tolerance</span>
-                    <span class="slider-value" id="toleranceValue">25%</span>
-                </div>
-                <input type="range" min="10" max="50" step="5" value="25" id="toleranceSlider">
-            </div>
-        </div>
-
-        <div class="info-panel">
-            <div class="info-row">
-                <span class="info-label">Status</span>
-                <span class="status-badge status-stopped" id="statusBadge">Stopped</span>
-            </div>
             <div class="info-row">
                 <span class="info-label">BPM</span>
                 <span class="info-value" id="bpmValue">--</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Mode</span>
-                <span class="info-value" id="modeInfo">--</span>
+                <span class="info-label">Beats Detected</span>
+                <span class="info-value" id="beatsValue">--</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">8-Count Phrases</span>
+                <span class="info-value" id="phrasesValue">--</span>
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Voice Volume</span>
+                    <span id="voiceVolValue">70%</span>
+                </div>
+                <input type="range" min="0" max="100" value="70" id="voiceVolSlider">
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Music Volume</span>
+                    <span id="musicVolValue">100%</span>
+                </div>
+                <input type="range" min="0" max="100" value="100" id="musicVolSlider">
             </div>
         </div>
 
-        <button class="control-button" id="controlButton">Start Listening</button>
-
         <p class="instructions">
-            Tap a band to follow its count. Bands lock when they find consistent beats.
+            Select MP3 files to analyze. The app will detect beats, find 8-count phrases, and count along with the music.
         </p>
-
-        <!-- Debug panel -->
-        <div class="info-panel" id="debugPanel" style="display: none; margin-top: 15px; font-size: 0.7rem;">
-            <div style="font-weight: bold; margin-bottom: 8px;">Debug Info</div>
-            <div id="debugLog" style="max-height: 150px; overflow-y: auto; font-family: monospace; line-height: 1.4;"></div>
-        </div>
-
-        <button id="toggleDebug" style="margin-top: 10px; padding: 8px 12px; font-size: 0.75rem; background: rgba(255,255,255,0.2); border: none; border-radius: 8px; color: white; cursor: pointer;">
-            Show Debug
-        </button>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/meyda@5.6.0/dist/web/meyda.min.js"></script>
+    <!-- Processing Overlay -->
+    <div class="processing-overlay" id="processingOverlay">
+        <div class="processing-content">
+            <div class="spinner"></div>
+            <div class="processing-text" id="processingText">Processing...</div>
+            <div class="processing-detail" id="processingDetail">Analyzing audio</div>
+        </div>
+    </div>
+
     <script>
-        class BeatCounter {
+        class BeatCounterApp {
             constructor() {
-                this.isListening = false;
                 this.audioContext = null;
-                this.microphone = null;
-                this.meydaAnalyzer = null;
-
-                // Settings
-                this.sensitivity = 1.8; // Onset threshold multiplier (higher = less sensitive)
-                this.lockBeats = 4; // How many consistent beats needed to lock tempo
-                this.tolerance = 0.25; // Beat timing tolerance (25%)
-
-                // Volume
-                this.volumeHistory = [];
-                this.smoothedVolume = 0;
-                this.maxObservedVolume = 0.02; // Lower starting max for better sensitivity
-
-                // Beat detection
-                this.energyHistory = [];
-                this.lastBeatTime = 0;
-                this.selectedBand = 0; // 0-9 for specific band, 'all' for combined
-                this.analyser = null;
-                this.frequencyData = null;
-
-                // Instrument-focused frequency bands for better beat detection
-                // These target specific drum/instrument frequencies
-                this.numBands = 12;
-                this.bandRanges = [
-                    [30, 60],     // Sub bass (kick fundamental)
-                    [60, 100],    // Bass (kick body)
-                    [100, 150],   // Upper bass (kick punch)
-                    [150, 250],   // Low mids (snare body)
-                    [250, 400],   // Mids (snare crack)
-                    [400, 800],   // Upper mids
-                    [800, 1600],  // Presence
-                    [1600, 3200], // Brilliance (snare snap)
-                    [3200, 6000], // High (hi-hat body)
-                    [6000, 10000],// Air (hi-hat shimmer)
-                    [10000, 16000], // Sparkle
-                    [16000, 20000]  // Ultra high
-                ];
-                this.bandNames = ['SubBass', 'Kick', 'Punch', 'Snare', 'Crack', 'Mids', 'Presence', 'Snap', 'HiHat', 'Air', 'Sparkle', 'Ultra'];
-                this.bandEnergies = new Array(this.numBands).fill(0);
-                this.maxBandEnergies = new Array(this.numBands).fill(0.01);
-                this.bandEnergyHistories = Array.from({length: this.numBands}, () => []);
-                this.bandLastBeatTime = new Array(this.numBands).fill(0);
-                this.bandBeatCount = new Array(this.numBands).fill(0);
-
-                // Spectral flux for onset detection (measures CHANGE in energy, not level)
-                this.prevBandEnergies = new Array(this.numBands).fill(0);
-                this.bandFlux = new Array(this.numBands).fill(0);
-                this.bandFluxHistories = Array.from({length: this.numBands}, () => []);
-
-                // Per-band tempo locking
-                this.bandBeatIntervals = Array.from({length: this.numBands}, () => []);
-                this.bandTempoLocked = new Array(this.numBands).fill(false);
-                this.bandLockedInterval = new Array(this.numBands).fill(0);
-                this.bandNextBeatTime = new Array(this.numBands).fill(0);
-                // Per-band activity tracking for dynamic visibility
-                this.bandRecentBeats = new Array(this.numBands).fill(0);
-                this.bandConsistencyScore = new Array(this.numBands).fill(0);
-                this.showAllBands = false;
-
-                // Global onset detection using spectral flux
-                this.onsetHistory = [];
-                this.lastOnsetTime = 0;
-
-                // Tempo tracking
-                this.beatTimes = []; // Actual detected beat times
-                this.beatIntervals = []; // Intervals between beats
-                this.beatEnergies = []; // Energy of each beat for accent detection
-                this.lockedBPM = 0; // Locked tempo
-                this.lockedInterval = 0; // Interval in seconds
-
-                // Predictive counting
-                this.isTempoLocked = false;
-                this.countTimer = null;
-                this.currentCount = 0; // 0-7
-                this.nextScheduledTime = 0;
-
-                // Accent tracking for phrase realignment
-                this.accentHistory = []; // Track where accents fall relative to current count
-                this.requiredAccents = 3; // Need 3 consistent accents to realign
-
-                // Phrase tracking
-                this.phraseStartTime = 0;
+                this.songs = []; // {name, file, audioBuffer, beats, bpm, processed}
+                this.currentSong = null;
+                this.isPlaying = false;
+                this.sourceNode = null;
+                this.gainNode = null;
+                this.startTime = 0;
+                this.pauseTime = 0;
+                this.animationFrame = null;
+                this.scheduledCounts = [];
+                this.currentCount = 0;
 
                 // Voice
                 this.synth = window.speechSynthesis;
                 this.selectedVoice = null;
+                this.voiceVolume = 0.7;
+                this.musicVolume = 1.0;
 
-                // UI
-                this.controlButton = document.getElementById('controlButton');
-                this.statusBadge = document.getElementById('statusBadge');
+                // UI Elements
+                this.fileInput = document.getElementById('fileInput');
+                this.fileBtn = document.getElementById('fileBtn');
+                this.songList = document.getElementById('songList');
+                this.playerPanel = document.getElementById('playerPanel');
+                this.playBtn = document.getElementById('playBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.progressBar = document.getElementById('progressBar');
+                this.progressFill = document.getElementById('progressFill');
+                this.currentTimeEl = document.getElementById('currentTime');
+                this.totalTimeEl = document.getElementById('totalTime');
                 this.beatIndicator = document.getElementById('beatIndicator');
                 this.currentCountEl = document.getElementById('currentCount');
                 this.bpmValue = document.getElementById('bpmValue');
-                this.modeInfo = document.getElementById('modeInfo');
-                this.volumeBar = document.getElementById('volumeBar');
-                this.volumePercent = document.getElementById('volumePercent');
-                this.controlsContainer = document.getElementById('controlsContainer');
-                this.sensitivitySlider = document.getElementById('sensitivitySlider');
-                this.sensitivityValue = document.getElementById('sensitivityValue');
-                this.lockBeatsSlider = document.getElementById('lockBeatsSlider');
-                this.lockBeatsValue = document.getElementById('lockBeatsValue');
-                this.toleranceSlider = document.getElementById('toleranceSlider');
-                this.toleranceValue = document.getElementById('toleranceValue');
+                this.beatsValue = document.getElementById('beatsValue');
+                this.phrasesValue = document.getElementById('phrasesValue');
+                this.voiceVolSlider = document.getElementById('voiceVolSlider');
+                this.voiceVolValue = document.getElementById('voiceVolValue');
+                this.musicVolSlider = document.getElementById('musicVolSlider');
+                this.musicVolValue = document.getElementById('musicVolValue');
+                this.processingOverlay = document.getElementById('processingOverlay');
+                this.processingText = document.getElementById('processingText');
+                this.processingDetail = document.getElementById('processingDetail');
                 this.beatDots = document.querySelectorAll('.beat-dot');
-                this.debugPanel = document.getElementById('debugPanel');
-                this.debugLog = document.getElementById('debugLog');
-                this.toggleDebugBtn = document.getElementById('toggleDebug');
-                this.debugEnabled = false;
-
-                // Frequency band UI
-                this.selectedBandLabel = document.getElementById('selectedBandLabel');
-                this.allBandBtn = document.getElementById('allBandBtn');
-                this.bandGrid = document.getElementById('bandGrid');
-                this.showAllBandsBtn = document.getElementById('showAllBandsBtn');
-                this.noBandsMsg = document.getElementById('noBandsMsg');
-
-                // Generate band grid HTML
-                this.generateBandGrid();
-                this.freqBands = document.querySelectorAll('.freq-band');
-
-                // Start with all bands hidden (will show as they detect beats)
-                this.freqBands.forEach(b => b.classList.add('hidden'));
 
                 this.bindEvents();
-            }
-
-            generateBandGrid() {
-                this.bandGrid.innerHTML = '';
-                for (let i = 0; i < this.numBands; i++) {
-                    const name = this.bandNames[i];
-                    const div = document.createElement('div');
-                    div.className = 'freq-band' + (i === 0 ? ' selected' : '');
-                    div.dataset.band = i;
-                    div.innerHTML = `
-                        <div class="band-beat"></div>
-                        <div class="band-bar"><div class="band-fill"></div></div>
-                        <div class="band-label">${name}</div>
-                        <div class="band-score" data-band="${i}"></div>
-                    `;
-                    this.bandGrid.appendChild(div);
-                }
+                this.selectBestVoice();
             }
 
             bindEvents() {
-                this.controlButton.addEventListener('click', () => {
-                    if (this.isListening) {
-                        this.stop();
-                    } else {
-                        this.start();
+                // File input
+                this.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+
+                // Drag and drop
+                this.fileBtn.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    this.fileBtn.style.borderColor = 'rgba(255,255,255,0.8)';
+                    this.fileBtn.style.background = 'rgba(255,255,255,0.2)';
+                });
+
+                this.fileBtn.addEventListener('dragleave', () => {
+                    this.fileBtn.style.borderColor = 'rgba(255,255,255,0.4)';
+                    this.fileBtn.style.background = 'rgba(255,255,255,0.1)';
+                });
+
+                this.fileBtn.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    this.fileBtn.style.borderColor = 'rgba(255,255,255,0.4)';
+                    this.fileBtn.style.background = 'rgba(255,255,255,0.1)';
+                    this.handleFiles(e.dataTransfer.files);
+                });
+
+                // Playback controls
+                this.playBtn.addEventListener('click', () => this.togglePlay());
+                this.stopBtn.addEventListener('click', () => this.stop());
+
+                // Progress bar seek
+                this.progressBar.addEventListener('click', (e) => {
+                    if (!this.currentSong || !this.currentSong.processed) return;
+                    const rect = this.progressBar.getBoundingClientRect();
+                    const percent = (e.clientX - rect.left) / rect.width;
+                    this.seek(percent * this.currentSong.audioBuffer.duration);
+                });
+
+                // Volume sliders
+                this.voiceVolSlider.addEventListener('input', (e) => {
+                    this.voiceVolume = e.target.value / 100;
+                    this.voiceVolValue.textContent = e.target.value + '%';
+                });
+
+                this.musicVolSlider.addEventListener('input', (e) => {
+                    this.musicVolume = e.target.value / 100;
+                    this.musicVolValue.textContent = e.target.value + '%';
+                    if (this.gainNode) {
+                        this.gainNode.gain.value = this.musicVolume;
                     }
                 });
 
-                this.sensitivitySlider.addEventListener('input', (e) => {
-                    this.sensitivity = parseFloat(e.target.value);
-                    this.sensitivityValue.textContent = this.sensitivity.toFixed(1);
-                });
-
-                this.lockBeatsSlider.addEventListener('input', (e) => {
-                    this.lockBeats = parseInt(e.target.value);
-                    this.lockBeatsValue.textContent = this.lockBeats;
-                });
-
-                this.toleranceSlider.addEventListener('input', (e) => {
-                    this.tolerance = parseInt(e.target.value) / 100;
-                    this.toleranceValue.textContent = e.target.value + '%';
-                });
-
-                // Select best voice when voices are loaded
-                this.selectBestVoice();
+                // Voice selection
                 if (this.synth.onvoiceschanged !== undefined) {
                     this.synth.onvoiceschanged = () => this.selectBestVoice();
                 }
-
-                // Debug toggle
-                this.toggleDebugBtn.addEventListener('click', () => {
-                    this.debugEnabled = !this.debugEnabled;
-                    this.debugPanel.style.display = this.debugEnabled ? 'block' : 'none';
-                    this.toggleDebugBtn.textContent = this.debugEnabled ? 'Hide Debug' : 'Show Debug';
-                });
-
-                // Band selection - click on individual bands
-                this.freqBands.forEach(band => {
-                    band.addEventListener('click', () => {
-                        this.freqBands.forEach(b => b.classList.remove('selected'));
-                        band.classList.add('selected');
-                        this.allBandBtn.classList.remove('active');
-                        this.selectedBand = parseInt(band.dataset.band);
-                        const range = this.bandRanges[this.selectedBand];
-                        this.selectedBandLabel.textContent = `${range[0]}-${range[1]}Hz`;
-                        this.log(`Switched to band ${this.selectedBand}: ${range[0]}-${range[1]}Hz`);
-                        this.energyHistory = [];
-                    });
-                });
-
-                // "Use All" button
-                this.allBandBtn.addEventListener('click', () => {
-                    this.freqBands.forEach(b => b.classList.remove('selected'));
-                    this.allBandBtn.classList.add('active');
-                    this.selectedBand = 'all';
-                    this.selectedBandLabel.textContent = 'All';
-                    this.log('Switched to all bands');
-                    this.energyHistory = [];
-                });
-
-                // "Show All Bands" toggle
-                this.showAllBandsBtn.addEventListener('click', () => {
-                    this.showAllBands = !this.showAllBands;
-                    this.showAllBandsBtn.classList.toggle('active', this.showAllBands);
-                    this.showAllBandsBtn.textContent = this.showAllBands ? 'Auto-Hide Bands' : 'Show All Bands';
-                    this.updateBandVisibility();
-                });
             }
 
-            log(msg) {
-                if (!this.debugEnabled) return;
-                const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-                const line = document.createElement('div');
-                line.textContent = `${time} ${msg}`;
-                this.debugLog.appendChild(line);
-                this.debugLog.scrollTop = this.debugLog.scrollHeight;
-                // Keep last 50 lines
-                while (this.debugLog.children.length > 50) {
-                    this.debugLog.removeChild(this.debugLog.firstChild);
+            async handleFiles(files) {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                for (const file of files) {
+                    if (!file.type.startsWith('audio/')) continue;
+
+                    // Check if already added
+                    if (this.songs.find(s => s.name === file.name)) continue;
+
+                    const song = {
+                        name: file.name,
+                        file: file,
+                        audioBuffer: null,
+                        beats: [],
+                        bpm: 0,
+                        processed: false
+                    };
+
+                    this.songs.push(song);
+                }
+
+                this.renderSongList();
+            }
+
+            renderSongList() {
+                this.songList.innerHTML = '';
+
+                for (const song of this.songs) {
+                    const item = document.createElement('div');
+                    item.className = 'song-item';
+                    if (this.currentSong === song) {
+                        item.classList.add('selected');
+                    }
+                    if (song.processed) {
+                        item.classList.add('ready');
+                    }
+
+                    let statusText = 'Click to process';
+                    if (song.processed) {
+                        statusText = 'Ready';
+                    }
+
+                    item.innerHTML = `
+                        <span class="song-name">${song.name}</span>
+                        ${song.processed ? `<span class="song-bpm">${song.bpm} BPM</span>` : ''}
+                        <span class="song-status">${statusText}</span>
+                    `;
+
+                    item.addEventListener('click', () => this.selectSong(song));
+                    this.songList.appendChild(item);
                 }
             }
 
-            async start() {
+            async selectSong(song) {
+                this.stop();
+                this.currentSong = song;
+                this.playerPanel.style.display = 'block';
+                this.renderSongList();
+
+                if (!song.processed) {
+                    await this.processSong(song);
+                }
+
+                this.updatePlayerUI();
+            }
+
+            async processSong(song) {
+                this.showProcessing('Loading audio...', song.name);
+
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-                    });
+                    // Load audio buffer
+                    const arrayBuffer = await song.file.arrayBuffer();
+                    song.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    this.microphone = this.audioContext.createMediaStreamSource(stream);
+                    this.showProcessing('Analyzing beats...', 'This may take a moment');
 
-                    // Create analyser for frequency bands
-                    this.analyser = this.audioContext.createAnalyser();
-                    this.analyser.fftSize = 1024;
-                    this.microphone.connect(this.analyser);
-                    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
+                    // Detect beats
+                    const analysis = await this.analyzeBeats(song.audioBuffer);
+                    song.beats = analysis.beats;
+                    song.bpm = analysis.bpm;
 
-                    this.meydaAnalyzer = Meyda.createMeydaAnalyzer({
-                        audioContext: this.audioContext,
-                        source: this.microphone,
-                        bufferSize: 512,
-                        featureExtractors: ['rms', 'energy'],
-                        callback: (features) => this.processAudio(features)
-                    });
+                    this.showProcessing('Validating 8-counts...', `Found ${song.beats.length} beats at ${song.bpm} BPM`);
 
-                    this.meydaAnalyzer.start();
-                    this.resetState();
+                    // Validate and adjust beats for proper 8-count distribution
+                    song.beats = this.validate8Counts(song.beats, song.bpm, song.audioBuffer.duration);
 
-                    this.isListening = true;
-                    this.controlsContainer.style.display = 'block';
-                    this.updateUI();
-                    this.updateStatus('Learning tempo...', 'learning');
-                    this.modeInfo.textContent = 'Listening';
-                    this.beatIndicator.classList.add('waiting');
+                    song.processed = true;
+                    this.hideProcessing();
+                    this.renderSongList();
 
                 } catch (error) {
-                    console.error('Error:', error);
-                    alert('Please allow microphone access.');
+                    console.error('Error processing song:', error);
+                    this.hideProcessing();
+                    alert('Error processing audio file: ' + error.message);
+                }
+            }
+
+            async analyzeBeats(audioBuffer) {
+                // Get mono audio data
+                const channelData = audioBuffer.getChannelData(0);
+                const sampleRate = audioBuffer.sampleRate;
+
+                // Parameters for beat detection
+                const hopSize = Math.floor(sampleRate * 0.01); // 10ms hops
+                const frameSize = Math.floor(sampleRate * 0.02); // 20ms frames
+
+                // Calculate spectral flux for onset detection
+                const fluxValues = [];
+                const energyValues = [];
+                let prevSpectrum = null;
+
+                // Use smaller FFT for efficiency
+                const fftSize = 1024;
+                const offlineCtx = new OfflineAudioContext(1, audioBuffer.length, sampleRate);
+                const analyser = offlineCtx.createAnalyser();
+                analyser.fftSize = fftSize;
+
+                // Process in chunks to calculate flux
+                for (let i = 0; i < channelData.length - frameSize; i += hopSize) {
+                    // Calculate frame energy
+                    let energy = 0;
+                    for (let j = 0; j < frameSize; j++) {
+                        energy += channelData[i + j] * channelData[i + j];
+                    }
+                    energy = Math.sqrt(energy / frameSize);
+                    energyValues.push(energy);
+
+                    // Simple spectral flux approximation using energy difference
+                    if (energyValues.length > 1) {
+                        const flux = Math.max(0, energy - energyValues[energyValues.length - 2]);
+                        fluxValues.push({ time: i / sampleRate, flux, energy });
+                    }
+                }
+
+                // Normalize flux values
+                const maxFlux = Math.max(...fluxValues.map(f => f.flux));
+                fluxValues.forEach(f => f.flux = f.flux / maxFlux);
+
+                // Peak picking with adaptive threshold
+                const beats = [];
+                const windowSize = 10; // samples for local average
+                const threshold = 0.3;
+                const minBeatInterval = 0.2; // 300 BPM max
+
+                for (let i = windowSize; i < fluxValues.length - windowSize; i++) {
+                    const current = fluxValues[i];
+
+                    // Local average
+                    let localAvg = 0;
+                    for (let j = i - windowSize; j <= i + windowSize; j++) {
+                        localAvg += fluxValues[j].flux;
+                    }
+                    localAvg /= (windowSize * 2 + 1);
+
+                    // Is this a peak above threshold?
+                    const isLocalMax = current.flux > fluxValues[i - 1].flux &&
+                                       current.flux > fluxValues[i + 1].flux;
+                    const aboveThreshold = current.flux > localAvg + threshold;
+
+                    if (isLocalMax && aboveThreshold) {
+                        // Check minimum interval
+                        if (beats.length === 0 || current.time - beats[beats.length - 1].time > minBeatInterval) {
+                            beats.push({ time: current.time, energy: current.energy });
+                        }
+                    }
+                }
+
+                // Calculate BPM from beat intervals
+                const intervals = [];
+                for (let i = 1; i < beats.length; i++) {
+                    const interval = beats[i].time - beats[i - 1].time;
+                    if (interval > 0.25 && interval < 1.5) { // 40-240 BPM range
+                        intervals.push(interval);
+                    }
+                }
+
+                // Find most common interval (histogram approach)
+                const bpmHistogram = {};
+                for (const interval of intervals) {
+                    const bpm = Math.round(60 / interval);
+                    // Round to nearest 5 BPM for grouping
+                    const roundedBpm = Math.round(bpm / 5) * 5;
+                    bpmHistogram[roundedBpm] = (bpmHistogram[roundedBpm] || 0) + 1;
+                }
+
+                let bestBpm = 120; // Default
+                let bestCount = 0;
+                for (const [bpm, count] of Object.entries(bpmHistogram)) {
+                    if (count > bestCount) {
+                        bestCount = count;
+                        bestBpm = parseInt(bpm);
+                    }
+                }
+
+                // Refine BPM using median of intervals near the detected BPM
+                const targetInterval = 60 / bestBpm;
+                const nearIntervals = intervals.filter(i =>
+                    Math.abs(i - targetInterval) / targetInterval < 0.2
+                );
+
+                if (nearIntervals.length > 0) {
+                    nearIntervals.sort((a, b) => a - b);
+                    const medianInterval = nearIntervals[Math.floor(nearIntervals.length / 2)];
+                    bestBpm = Math.round(60 / medianInterval);
+                }
+
+                return { beats, bpm: bestBpm };
+            }
+
+            validate8Counts(beats, bpm, duration) {
+                // Expected interval between beats
+                const expectedInterval = 60 / bpm;
+
+                // If we have very few beats, generate them from BPM
+                if (beats.length < 16) {
+                    console.log('Too few beats detected, generating from BPM');
+                    return this.generateBeatsFromBpm(bpm, duration);
+                }
+
+                // Find the most likely starting point for phrase alignment
+                // by looking at beat energies (louder beats often fall on 1)
+
+                // Calculate average interval from detected beats
+                let totalInterval = 0;
+                let count = 0;
+                for (let i = 1; i < beats.length; i++) {
+                    const interval = beats[i].time - beats[i - 1].time;
+                    if (Math.abs(interval - expectedInterval) / expectedInterval < 0.3) {
+                        totalInterval += interval;
+                        count++;
+                    }
+                }
+
+                const actualInterval = count > 0 ? totalInterval / count : expectedInterval;
+                const actualBpm = Math.round(60 / actualInterval);
+
+                console.log(`Detected ${beats.length} beats, calculated interval: ${actualInterval.toFixed(3)}s (${actualBpm} BPM)`);
+
+                // Check beat distribution - are beats evenly spaced?
+                const toleratedBeats = [];
+                let expectedTime = beats[0].time;
+
+                for (let i = 0; i < beats.length; i++) {
+                    const beat = beats[i];
+
+                    // Find nearest expected beat time
+                    while (expectedTime < beat.time - actualInterval * 0.4) {
+                        expectedTime += actualInterval;
+                    }
+
+                    // Is this beat close to an expected time?
+                    if (Math.abs(beat.time - expectedTime) < actualInterval * 0.3) {
+                        toleratedBeats.push({ time: expectedTime, energy: beat.energy });
+                        expectedTime += actualInterval;
+                    }
+                }
+
+                // If we lost too many beats, regenerate from BPM
+                if (toleratedBeats.length < beats.length * 0.5) {
+                    console.log('Beat timing too inconsistent, generating from BPM');
+                    return this.generateBeatsFromBpm(bpm, duration, beats[0].time);
+                }
+
+                // Fill in any missing beats
+                const filledBeats = [];
+                const startTime = toleratedBeats[0].time;
+                const endTime = duration - 0.5; // Stop 0.5s before end
+
+                for (let t = startTime; t < endTime; t += actualInterval) {
+                    // Check if we have a detected beat near this time
+                    const nearBeat = toleratedBeats.find(b =>
+                        Math.abs(b.time - t) < actualInterval * 0.3
+                    );
+
+                    filledBeats.push({
+                        time: nearBeat ? nearBeat.time : t,
+                        energy: nearBeat ? nearBeat.energy : 0.5
+                    });
+                }
+
+                console.log(`Validated to ${filledBeats.length} beats`);
+                return filledBeats;
+            }
+
+            generateBeatsFromBpm(bpm, duration, startTime = 0.5) {
+                const interval = 60 / bpm;
+                const beats = [];
+
+                for (let t = startTime; t < duration - 0.5; t += interval) {
+                    beats.push({ time: t, energy: 0.5 });
+                }
+
+                return beats;
+            }
+
+            updatePlayerUI() {
+                const song = this.currentSong;
+                if (!song) return;
+
+                if (song.processed) {
+                    this.playBtn.disabled = false;
+                    this.playBtn.textContent = 'Play with Counting';
+                    this.bpmValue.textContent = song.bpm;
+                    this.beatsValue.textContent = song.beats.length;
+                    this.phrasesValue.textContent = Math.floor(song.beats.length / 8);
+                    this.totalTimeEl.textContent = this.formatTime(song.audioBuffer.duration);
+                } else {
+                    this.playBtn.disabled = true;
+                    this.playBtn.textContent = 'Processing...';
+                    this.bpmValue.textContent = '--';
+                    this.beatsValue.textContent = '--';
+                    this.phrasesValue.textContent = '--';
+                }
+
+                this.currentCountEl.textContent = '-';
+                this.progressFill.style.width = '0%';
+                this.currentTimeEl.textContent = '0:00';
+            }
+
+            togglePlay() {
+                if (this.isPlaying) {
+                    this.pause();
+                } else {
+                    this.play();
+                }
+            }
+
+            async play() {
+                if (!this.currentSong || !this.currentSong.processed) return;
+
+                // Resume audio context if suspended
+                if (this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
+                }
+
+                // Create source and gain nodes
+                this.sourceNode = this.audioContext.createBufferSource();
+                this.sourceNode.buffer = this.currentSong.audioBuffer;
+
+                this.gainNode = this.audioContext.createGain();
+                this.gainNode.gain.value = this.musicVolume;
+
+                this.sourceNode.connect(this.gainNode);
+                this.gainNode.connect(this.audioContext.destination);
+
+                // Calculate start position
+                const offset = this.pauseTime;
+                this.startTime = this.audioContext.currentTime - offset;
+
+                this.sourceNode.start(0, offset);
+                this.isPlaying = true;
+
+                this.playBtn.textContent = 'Pause';
+                this.playBtn.classList.add('playing');
+
+                // Schedule all the counts
+                this.scheduleAllCounts(offset);
+
+                // Start animation loop
+                this.updatePlayback();
+
+                // Handle song end
+                this.sourceNode.onended = () => {
+                    if (this.isPlaying) {
+                        this.stop();
+                    }
+                };
+            }
+
+            pause() {
+                if (!this.isPlaying) return;
+
+                this.pauseTime = this.audioContext.currentTime - this.startTime;
+                this.sourceNode.stop();
+                this.isPlaying = false;
+
+                // Cancel scheduled speech
+                this.synth.cancel();
+                this.clearScheduledCounts();
+
+                this.playBtn.textContent = 'Resume';
+                this.playBtn.classList.remove('playing');
+
+                if (this.animationFrame) {
+                    cancelAnimationFrame(this.animationFrame);
                 }
             }
 
             stop() {
-                if (this.countTimer) {
-                    clearTimeout(this.countTimer);
-                    this.countTimer = null;
+                if (this.sourceNode) {
+                    try {
+                        this.sourceNode.stop();
+                    } catch (e) {}
                 }
-                if (this.meydaAnalyzer) this.meydaAnalyzer.stop();
-                if (this.microphone && this.microphone.mediaStream) {
-                    this.microphone.mediaStream.getTracks().forEach(t => t.stop());
-                }
-                if (this.audioContext) this.audioContext.close();
 
-                this.isListening = false;
-                this.controlsContainer.style.display = 'none';
-                this.updateUI();
-                this.updateStatus('Stopped', 'stopped');
+                this.isPlaying = false;
+                this.pauseTime = 0;
+
+                this.synth.cancel();
+                this.clearScheduledCounts();
+
+                this.playBtn.textContent = 'Play with Counting';
+                this.playBtn.classList.remove('playing');
+
+                this.progressFill.style.width = '0%';
+                this.currentTimeEl.textContent = '0:00';
                 this.currentCountEl.textContent = '-';
-                this.bpmValue.textContent = '--';
-                this.modeInfo.textContent = '--';
-                this.beatIndicator.classList.remove('waiting', 'accent', 'pulse');
+                this.beatIndicator.classList.remove('pulse', 'accent');
                 this.clearDots();
-            }
 
-            resetState() {
-                this.volumeHistory = [];
-                this.smoothedVolume = 0;
-                this.maxObservedVolume = 0.05;
-                this.energyHistory = [];
-                this.lastBeatTime = 0;
-                this.beatTimes = [];
-                this.beatIntervals = [];
-                this.beatEnergies = [];
-                this.lockedBPM = 0;
-                this.lockedInterval = 0;
-                this.isTempoLocked = false;
-                this.currentCount = 0;
-                this.nextScheduledTime = 0;
-                this.phraseStartTime = 0;
-                this.accentHistory = [];
-                this.maxBandEnergies = new Array(this.numBands).fill(0.01);
-                this.bandEnergyHistories = Array.from({length: this.numBands}, () => []);
-                this.prevBandEnergies = new Array(this.numBands).fill(0);
-                this.bandFlux = new Array(this.numBands).fill(0);
-                this.bandFluxHistories = Array.from({length: this.numBands}, () => []);
-                this.bandLastBeatTime = new Array(this.numBands).fill(0);
-                this.bandBeatCount = new Array(this.numBands).fill(0);
-                this.bandBeatIntervals = Array.from({length: this.numBands}, () => []);
-                this.bandTempoLocked = new Array(this.numBands).fill(false);
-                this.bandLockedInterval = new Array(this.numBands).fill(0);
-                this.bandNextBeatTime = new Array(this.numBands).fill(0);
-                this.bandRecentBeats = new Array(this.numBands).fill(0);
-                this.bandConsistencyScore = new Array(this.numBands).fill(0);
-                this.onsetHistory = [];
-                this.lastOnsetTime = 0;
-                // Clear the displayed counts in beat indicators
-                this.freqBands.forEach(band => {
-                    const beatIndicator = band.querySelector('.band-beat');
-                    beatIndicator.textContent = '';
-                    band.classList.remove('locked');
-                    band.classList.add('hidden');
-                });
-                this.noBandsMsg.style.display = 'block';
-                if (this.countTimer) {
-                    clearTimeout(this.countTimer);
-                    this.countTimer = null;
+                if (this.animationFrame) {
+                    cancelAnimationFrame(this.animationFrame);
                 }
             }
 
-            processAudio(features) {
-                if (!features || !this.isListening) return;
+            seek(time) {
+                const wasPlaying = this.isPlaying;
 
-                const now = this.audioContext.currentTime;
-                const rms = features.rms || 0;
-
-                // Get frequency data for band analysis
-                this.analyser.getByteFrequencyData(this.frequencyData);
-                this.calculateBandEnergies();
-                this.detectBandBeats(now);
-                this.updateBandDisplay();
-
-                // Smooth volume for display
-                this.volumeHistory.push(rms);
-                if (this.volumeHistory.length > 10) this.volumeHistory.shift();
-                this.smoothedVolume = this.volumeHistory.reduce((a, b) => a + b, 0) / this.volumeHistory.length;
-                if (this.smoothedVolume > this.maxObservedVolume) {
-                    this.maxObservedVolume = this.smoothedVolume;
-                }
-                this.updateVolumeDisplay();
-
-                // Main counter follows selected band (if locked)
-                this.updateMainCounter(now);
-            }
-
-            calculateBandEnergies() {
-                const sampleRate = this.audioContext.sampleRate;
-                const binCount = this.analyser.frequencyBinCount;
-                const binWidth = sampleRate / (binCount * 2);
-
-                // Calculate energy for each band
-                for (let b = 0; b < this.numBands; b++) {
-                    const [lowFreq, highFreq] = this.bandRanges[b];
-                    const startBin = Math.floor(lowFreq / binWidth);
-                    const endBin = Math.min(binCount - 1, Math.floor(highFreq / binWidth));
-
-                    let sum = 0;
-                    let count = 0;
-                    for (let i = startBin; i <= endBin; i++) {
-                        sum += this.frequencyData[i] / 255;
-                        count++;
-                    }
-
-                    const currentEnergy = count > 0 ? sum / count : 0;
-
-                    // Calculate spectral flux (positive change only = onset)
-                    // This detects when new energy appears, not just high energy
-                    const flux = Math.max(0, currentEnergy - this.prevBandEnergies[b]);
-                    this.bandFlux[b] = flux;
-                    this.prevBandEnergies[b] = currentEnergy;
-                    this.bandEnergies[b] = currentEnergy;
-
-                    // Update max with slow decay so it adapts to current levels
-                    if (this.bandEnergies[b] > this.maxBandEnergies[b]) {
-                        this.maxBandEnergies[b] = this.bandEnergies[b];
-                    } else {
-                        this.maxBandEnergies[b] *= 0.995;
-                        this.maxBandEnergies[b] = Math.max(this.maxBandEnergies[b], 0.01);
-                    }
-                }
-            }
-
-            detectBandBeats(now) {
-                // Decay recent beat counts slowly
-                for (let b = 0; b < this.numBands; b++) {
-                    this.bandRecentBeats[b] *= 0.995; // Slow decay
+                if (this.isPlaying) {
+                    this.sourceNode.stop();
+                    this.synth.cancel();
+                    this.clearScheduledCounts();
                 }
 
-                // Detect beats in each band independently
-                for (let b = 0; b < this.numBands; b++) {
-                    const bandEl = this.freqBands[b];
-                    const beatIndicator = bandEl.querySelector('.band-beat');
+                this.pauseTime = Math.max(0, Math.min(time, this.currentSong.audioBuffer.duration));
+                this.isPlaying = false;
 
-                    // If this band is tempo-locked, use predictive counting
-                    if (this.bandTempoLocked[b]) {
-                        // Check if it's time for the next predicted beat
-                        if (now >= this.bandNextBeatTime[b]) {
-                            // Increment count
-                            this.bandBeatCount[b] = (this.bandBeatCount[b] + 1) % 8;
-                            beatIndicator.textContent = this.bandBeatCount[b] + 1;
-                            beatIndicator.classList.add('flash');
-                            setTimeout(() => beatIndicator.classList.remove('flash'), 80);
-                            // Schedule next beat
-                            this.bandNextBeatTime[b] = now + this.bandLockedInterval[b];
-                            // Track activity for locked bands too
-                            this.bandRecentBeats[b] = Math.min(10, this.bandRecentBeats[b] + 1);
-                        }
-                        continue; // Skip beat detection for locked bands
-                    }
-
-                    // Use spectral flux (change in energy) for onset detection
-                    // This is more robust than raw energy - detects note ATTACKS not sustains
-                    const flux = this.bandFlux[b];
-                    const normalizedFlux = flux / Math.max(this.maxBandEnergies[b], 0.001);
-
-                    // Track flux history per band for adaptive threshold
-                    this.bandFluxHistories[b].push(normalizedFlux);
-                    if (this.bandFluxHistories[b].length > 20) {
-                        this.bandFluxHistories[b].shift();
-                    }
-
-                    // Also track energy for display
-                    const normalizedEnergy = this.bandEnergies[b] / Math.max(this.maxBandEnergies[b], 0.001);
-                    this.bandEnergyHistories[b].push(normalizedEnergy);
-                    if (this.bandEnergyHistories[b].length > 12) {
-                        this.bandEnergyHistories[b].shift();
-                    }
-
-                    if (this.bandFluxHistories[b].length < 5) continue;
-
-                    // Adaptive threshold based on recent flux activity
-                    const avgFlux = this.bandFluxHistories[b].reduce((a, c) => a + c, 0) / this.bandFluxHistories[b].length;
-                    const fluxThreshold = avgFlux * this.sensitivity;
-                    const timeSinceLast = now - this.bandLastBeatTime[b];
-
-                    // Detect onset using spectral flux - must have significant CHANGE
-                    // Also require minimum energy level to avoid noise triggers
-                    if (normalizedFlux > fluxThreshold && normalizedFlux > 0.05 && normalizedEnergy > 0.2 && timeSinceLast > 0.1) {
-                        // Track activity - increment recent beat count
-                        this.bandRecentBeats[b] = Math.min(10, this.bandRecentBeats[b] + 1);
-
-                        // Record interval for tempo locking
-                        if (this.bandLastBeatTime[b] > 0) {
-                            const interval = now - this.bandLastBeatTime[b];
-                            if (interval > 0.2 && interval < 1.5) { // 40-300 BPM range
-                                this.bandBeatIntervals[b].push(interval);
-                                // Keep only last N intervals (use lockBeats setting)
-                                if (this.bandBeatIntervals[b].length > this.lockBeats * 2) {
-                                    this.bandBeatIntervals[b].shift();
-                                }
-                                // Calculate consistency score
-                                this.updateBandConsistency(b);
-                                // Try to lock tempo for this band
-                                this.tryLockBandTempo(b, now);
-                            }
-                        }
-                        this.bandLastBeatTime[b] = now;
-
-                        // Only increment count for unlocked bands on detected beats
-                        if (!this.bandTempoLocked[b]) {
-                            this.bandBeatCount[b] = (this.bandBeatCount[b] + 1) % 8;
-                            beatIndicator.textContent = this.bandBeatCount[b] + 1;
-                            beatIndicator.classList.add('flash');
-                            setTimeout(() => beatIndicator.classList.remove('flash'), 80);
-                        }
-                    }
-                }
-
-                // Update which bands are visible
-                this.updateBandVisibility();
-            }
-
-            updateBandConsistency(b) {
-                if (this.bandBeatIntervals[b].length < 3) {
-                    this.bandConsistencyScore[b] = 0;
-                    return;
-                }
-                const intervals = this.bandBeatIntervals[b].slice(-this.lockBeats);
-                const sorted = [...intervals].sort((a, c) => a - c);
-                const median = sorted[Math.floor(sorted.length / 2)];
-                const consistentCount = intervals.filter(i =>
-                    Math.abs(i - median) / median < this.tolerance
-                ).length;
-                this.bandConsistencyScore[b] = Math.round((consistentCount / intervals.length) * 100);
-            }
-
-            updateBandVisibility() {
-                let visibleCount = 0;
-                const minActivity = 2; // Need at least 2 recent beats to show
-
-                for (let b = 0; b < this.numBands; b++) {
-                    const bandEl = this.freqBands[b];
-                    const isActive = this.bandRecentBeats[b] >= minActivity || this.bandTempoLocked[b];
-
-                    if (this.showAllBands || isActive) {
-                        bandEl.classList.remove('hidden');
-                        visibleCount++;
-                    } else {
-                        bandEl.classList.add('hidden');
-                    }
-                }
-
-                // Show message if no bands are visible
-                this.noBandsMsg.style.display = visibleCount === 0 ? 'block' : 'none';
-            }
-
-            updateMainCounter(now) {
-                // Main counter follows the selected band
-                if (this.selectedBand === 'all') {
-                    // Find first locked band to follow
-                    let followBand = -1;
-                    for (let b = 0; b < this.numBands; b++) {
-                        if (this.bandTempoLocked[b]) {
-                            followBand = b;
-                            break;
-                        }
-                    }
-                    if (followBand === -1) {
-                        this.modeInfo.textContent = 'Learning...';
-                        return;
-                    }
-                    this.selectedBand = followBand; // Auto-select first locked band
-                    this.freqBands[followBand].classList.add('selected');
-                    this.allBandBtn.classList.remove('active');
-                    this.selectedBandLabel.textContent = this.bandNames[followBand];
-                }
-
-                const b = this.selectedBand;
-                if (!this.bandTempoLocked[b]) {
-                    // Selected band not locked yet
-                    const score = this.bandConsistencyScore[b];
-                    if (score > 0) {
-                        this.modeInfo.textContent = `${score}% consistent`;
-                    } else {
-                        this.modeInfo.textContent = 'Learning...';
-                    }
-                    this.updateStatus('Learning...', 'learning');
-                    return;
-                }
-
-                // Follow this band's count
-                const bpm = Math.round(60 / this.bandLockedInterval[b]);
-                this.bpmValue.textContent = bpm;
-                this.modeInfo.textContent = this.bandNames[b];
-                this.updateStatus('Counting', 'counting');
-
-                // Check if band just ticked
-                const timeSinceLastBeat = now - (this.bandNextBeatTime[b] - this.bandLockedInterval[b]);
-                if (timeSinceLastBeat < 0.05 && timeSinceLastBeat >= 0) {
-                    // Band just triggered - update main display
-                    const count = this.bandBeatCount[b] + 1;
-                    this.currentCountEl.textContent = count;
-                    this.currentCount = this.bandBeatCount[b];
-                    this.updateDots(this.currentCount);
-
-                    // Pulse
-                    this.beatIndicator.classList.remove('accent');
-                    if (count === 1) {
-                        this.beatIndicator.classList.add('accent');
-                    }
-                    this.beatIndicator.classList.add('pulse');
-                    setTimeout(() => this.beatIndicator.classList.remove('pulse'), 80);
-
-                    // Speak
-                    this.speakCount(count);
-                }
-            }
-
-            tryLockBandTempo(b, now) {
-                if (this.bandBeatIntervals[b].length < this.lockBeats) return;
-
-                // Get last N intervals
-                const recentIntervals = this.bandBeatIntervals[b].slice(-this.lockBeats);
-
-                // Calculate median
-                const sorted = [...recentIntervals].sort((a, c) => a - c);
-                let median = sorted[Math.floor(sorted.length / 2)];
-
-                // Check consistency - count how many are within tolerance
-                const consistentCount = recentIntervals.filter(i =>
-                    Math.abs(i - median) / median < this.tolerance
-                ).length;
-
-                // Need at least 60% of beats to be consistent
-                const minConsistent = Math.ceil(recentIntervals.length * 0.6);
-                if (consistentCount >= minConsistent) {
-                    // Check for half-tempo: if other bands are locked at ~2x our tempo,
-                    // we're probably detecting every other beat
-                    let shouldHalveInterval = false;
-                    for (let other = 0; other < this.numBands; other++) {
-                        if (other !== b && this.bandTempoLocked[other]) {
-                            const otherInterval = this.bandLockedInterval[other];
-                            // If our interval is ~2x another band's interval (within 15%)
-                            const ratio = median / otherInterval;
-                            if (ratio > 1.7 && ratio < 2.3) {
-                                shouldHalveInterval = true;
-                                this.log(`Band ${b} detected at half-tempo (ratio ${ratio.toFixed(2)}), correcting`);
-                                break;
-                            }
-                        }
-                    }
-
-                    // Also check if interval seems too slow for typical music (>0.75s = <80 BPM)
-                    // and there are faster-tempo possibilities in the intervals
-                    if (!shouldHalveInterval && median > 0.75) {
-                        // Check if half-intervals would also be consistent
-                        const halfIntervals = recentIntervals.map(i => i / 2);
-                        const halfMedian = median / 2;
-                        const halfConsistent = halfIntervals.filter(i =>
-                            Math.abs(i - halfMedian) / halfMedian < this.tolerance
-                        ).length;
-                        // If half-tempo is equally consistent and in normal range, prefer it
-                        if (halfConsistent >= minConsistent && halfMedian > 0.25 && halfMedian < 0.75) {
-                            shouldHalveInterval = true;
-                            this.log(`Band ${b} interval ${median.toFixed(3)}s seems slow, trying half`);
-                        }
-                    }
-
-                    if (shouldHalveInterval) {
-                        median = median / 2;
-                    }
-
-                    // Lock this band's tempo
-                    this.bandTempoLocked[b] = true;
-                    this.bandLockedInterval[b] = median;
-                    this.bandNextBeatTime[b] = now + median;
-                    // Mark as locked visually
-                    this.freqBands[b].classList.add('locked');
-                    this.log(`Band ${b} locked at ${Math.round(60/median)} BPM`);
-                }
-            }
-
-            updateBandDisplay() {
-                // Update the energy bar and score for each band
-                for (let b = 0; b < this.numBands; b++) {
-                    const percent = Math.min(100, (this.bandEnergies[b] / Math.max(this.maxBandEnergies[b], 0.01)) * 100);
-                    const bandEl = this.freqBands[b];
-                    const fill = bandEl.querySelector('.band-fill');
-                    fill.style.width = percent + '%';
-
-                    // Update consistency score display
-                    const scoreEl = bandEl.querySelector('.band-score');
-                    if (this.bandTempoLocked[b]) {
-                        const bpm = Math.round(60 / this.bandLockedInterval[b]);
-                        scoreEl.textContent = `${bpm}bpm`;
-                    } else if (this.bandConsistencyScore[b] > 0) {
-                        scoreEl.textContent = `${this.bandConsistencyScore[b]}%`;
-                    } else {
-                        scoreEl.textContent = '';
-                    }
-                }
-            }
-
-            onBeatDetected(time, energy) {
-                // Record beat time and energy
-                if (this.lastBeatTime > 0) {
-                    const interval = time - this.lastBeatTime;
-                    this.log(`Interval: ${interval.toFixed(3)}s (${Math.round(60/interval)} BPM)`);
-                    if (interval > 0.2 && interval < 1.5) { // 40-300 BPM range
-                        this.beatIntervals.push(interval);
-                        this.beatTimes.push(time);
-                        this.beatEnergies.push(energy);
-                        this.log(`Stored. Total intervals: ${this.beatIntervals.length}`);
-
-                        // Keep rolling window
-                        if (this.beatIntervals.length > 16) {
-                            this.beatIntervals.shift();
-                            this.beatTimes.shift();
-                            this.beatEnergies.shift();
-                        }
-
-                        this.checkTempo();
-
-                        // Check for accent (potential "1" beat) if locked
-                        if (this.isTempoLocked) {
-                            this.checkForAccent(energy);
-                        }
-                    }
-                }
-                this.lastBeatTime = time;
-            }
-
-            checkTempo() {
-                if (this.beatIntervals.length < this.lockBeats) {
-                    this.modeInfo.textContent = `${this.beatIntervals.length}/${this.lockBeats} beats`;
-                    this.log(`Need more beats: ${this.beatIntervals.length}/${this.lockBeats}`);
-                    return;
-                }
-
-                // Get last N intervals
-                const recentIntervals = this.beatIntervals.slice(-this.lockBeats);
-
-                // Calculate median of recent intervals
-                const sorted = [...recentIntervals].sort((a, b) => a - b);
-                const median = sorted[Math.floor(sorted.length / 2)];
-
-                // Check consistency - count how many are within tolerance
-                const consistentCount = recentIntervals.filter(i =>
-                    Math.abs(i - median) / median < this.tolerance
-                ).length;
-
-                // Need at least 60% of beats to be consistent
-                const minConsistent = Math.ceil(recentIntervals.length * 0.6);
-                const isConsistent = consistentCount >= minConsistent;
-
-                this.log(`Intervals: [${recentIntervals.map(i => i.toFixed(2)).join(', ')}]`);
-                this.log(`Median: ${median.toFixed(3)}s Consistent: ${consistentCount}/${recentIntervals.length} Need: ${minConsistent}`);
-
-                // Show progress
-                if (!this.isTempoLocked) {
-                    this.modeInfo.textContent = `${consistentCount}/${recentIntervals.length} consistent`;
-                }
-
-                if (!isConsistent) {
-                    this.log(`NOT consistent enough`);
-                    // Beats are inconsistent - but if locked, keep counting!
-                    // Just try to adjust tempo gradually
-                    if (this.isTempoLocked) {
-                        const avgRecent = recentIntervals.reduce((a, b) => a + b, 0) / recentIntervals.length;
-                        // Gradually adjust tempo even when inconsistent
-                        this.lockedInterval = this.lockedInterval * 0.9 + avgRecent * 0.1;
-                        this.lockedBPM = 60 / this.lockedInterval;
-                        this.bpmValue.textContent = Math.round(this.lockedBPM);
-                        this.modeInfo.textContent = 'Adjusting';
-                    }
-                    return;
-                }
-
-                // Intervals are consistent
-                const newBPM = 60 / median;
-
-                if (!this.isTempoLocked) {
-                    // Lock tempo and start predictive counting
-                    this.lockedBPM = newBPM;
-                    this.lockedInterval = median;
-                    this.isTempoLocked = true;
-                    this.currentCount = 0;
-                    this.phraseStartTime = this.beatTimes[this.beatTimes.length - 1];
-
-                    this.log(`*** LOCKED! BPM=${Math.round(this.lockedBPM)} interval=${median.toFixed(3)}s ***`);
-
-                    this.updateStatus('Counting', 'counting');
-                    this.modeInfo.textContent = 'Locked';
-                    this.bpmValue.textContent = Math.round(this.lockedBPM);
-                    this.beatIndicator.classList.remove('waiting');
-
-                    // Start the count immediately, then schedule next
-                    this.doCount();
-                    this.scheduleNextCount();
+                if (wasPlaying) {
+                    this.play();
                 } else {
-                    // Already locked - check if we should adjust
-                    const drift = Math.abs(median - this.lockedInterval) / this.lockedInterval;
-
-                    if (drift > 0.05) { // More than 5% change
-                        // Smoothly adjust tempo
-                        this.lockedInterval = this.lockedInterval * 0.7 + median * 0.3;
-                        this.lockedBPM = 60 / this.lockedInterval;
-                        this.bpmValue.textContent = Math.round(this.lockedBPM);
-
-                        // Reschedule if needed
-                        this.rescheduleCount();
-                    }
+                    this.progressFill.style.width = (this.pauseTime / this.currentSong.audioBuffer.duration * 100) + '%';
+                    this.currentTimeEl.textContent = this.formatTime(this.pauseTime);
                 }
             }
 
-            checkForAccent(energy) {
-                // Check if this beat is significantly louder than recent beats
-                if (this.beatEnergies.length < 8) return;
+            scheduleAllCounts(startOffset) {
+                this.clearScheduledCounts();
 
-                const recentEnergies = this.beatEnergies.slice(-8);
-                const avgEnergy = recentEnergies.reduce((a, b) => a + b, 0) / recentEnergies.length;
+                const beats = this.currentSong.beats;
+                const audioContextTime = this.audioContext.currentTime;
 
-                // If this beat is 50% louder than average, record it as an accent
-                if (energy > avgEnergy * 1.5) {
-                    const currentPos = this.currentCount; // 0-7
+                for (let i = 0; i < beats.length; i++) {
+                    const beat = beats[i];
+                    const beatTime = beat.time - startOffset;
 
-                    // Record where this accent fell
-                    this.accentHistory.push(currentPos);
+                    if (beatTime < 0) continue; // Skip past beats
 
-                    // Keep only last 8 accents
-                    if (this.accentHistory.length > 8) {
-                        this.accentHistory.shift();
-                    }
+                    const count = (i % 8) + 1; // 1-8
+                    const triggerTime = audioContextTime + beatTime;
 
-                    // Check if we have enough consistent accents to realign
-                    if (this.accentHistory.length >= this.requiredAccents) {
-                        // Count which position has the most accents
-                        const counts = {};
-                        for (const pos of this.accentHistory) {
-                            counts[pos] = (counts[pos] || 0) + 1;
-                        }
+                    // Schedule the count
+                    const timeout = setTimeout(() => {
+                        this.triggerCount(count);
+                    }, beatTime * 1000);
 
-                        // Find position with most accents
-                        let maxPos = 0;
-                        let maxCount = 0;
-                        for (const [pos, count] of Object.entries(counts)) {
-                            if (count > maxCount) {
-                                maxCount = count;
-                                maxPos = parseInt(pos);
-                            }
-                        }
-
-                        // Only realign if:
-                        // 1. At least 3 accents on same position
-                        // 2. That position is NOT beat 0 (already aligned)
-                        // 3. That position accounts for majority of recent accents
-                        if (maxCount >= 3 && maxPos !== 0 && maxCount >= this.accentHistory.length * 0.6) {
-                            // Set current count so next beat will be "1"
-                            // If accents keep falling on position 3, we want to shift so that becomes 0
-                            this.currentCount = 7; // Next increment will make it 0 (which displays as 1)
-                            this.accentHistory = []; // Reset after realignment
-                            this.modeInfo.textContent = 'Realigned';
-                        }
-                    }
+                    this.scheduledCounts.push(timeout);
                 }
             }
 
-            scheduleNextCount() {
-                if (!this.isTempoLocked || !this.isListening) return;
-
-                // Simply schedule next count after one beat interval
-                const delayMs = this.lockedInterval * 1000;
-
-                this.countTimer = setTimeout(() => {
-                    if (this.isListening && this.isTempoLocked) {
-                        // Always increment sequentially: 0,1,2,3,4,5,6,7,0,1,2...
-                        this.currentCount = (this.currentCount + 1) % 8;
-                        this.doCount();
-                        this.scheduleNextCount();
-                    }
-                }, delayMs);
+            clearScheduledCounts() {
+                for (const timeout of this.scheduledCounts) {
+                    clearTimeout(timeout);
+                }
+                this.scheduledCounts = [];
             }
 
-            rescheduleCount() {
-                // Don't interrupt current timing - just let next count use new interval
-                // The scheduleNextCount will pick up the new lockedInterval
-            }
+            triggerCount(count) {
+                this.currentCount = count;
 
-            doCount() {
-                const displayCount = this.currentCount + 1; // 1-8
-
-                // Visual
-                this.currentCountEl.textContent = displayCount;
+                // Update visual
+                this.currentCountEl.textContent = count;
                 this.beatIndicator.classList.remove('accent');
-                if (displayCount === 1) {
+                if (count === 1) {
                     this.beatIndicator.classList.add('accent');
                 }
 
                 this.beatIndicator.classList.add('pulse');
-                setTimeout(() => {
-                    this.beatIndicator.classList.remove('pulse');
-                }, 80);
+                setTimeout(() => this.beatIndicator.classList.remove('pulse'), 80);
 
-                this.updateDots(this.currentCount);
+                this.updateDots(count - 1);
 
-                // Speak
-                this.speakCount(displayCount);
-            }
-
-            updateDots(currentIndex) {
-                this.beatDots.forEach((dot, i) => {
-                    dot.classList.remove('current');
-                    if (i === currentIndex) {
-                        dot.classList.add('current');
-                    }
-                });
-            }
-
-            clearDots() {
-                this.beatDots.forEach(dot => dot.classList.remove('current'));
+                // Speak the count
+                this.speakCount(count);
             }
 
             speakCount(count) {
@@ -1354,33 +1083,54 @@
 
                 const utterance = new SpeechSynthesisUtterance(count.toString());
 
-                // Use selected voice if available
                 if (this.selectedVoice) {
                     utterance.voice = this.selectedVoice;
                 }
 
-                // Softer, more natural settings
-                utterance.rate = 1.4; // Slower, more relaxed
-                utterance.volume = 0.5; // Softer
-                utterance.pitch = count === 1 ? 1.1 : 0.95; // Subtle accent on 1
+                utterance.rate = 1.5;
+                utterance.volume = this.voiceVolume;
+                utterance.pitch = count === 1 ? 1.1 : 0.95;
 
                 this.synth.speak(utterance);
+            }
+
+            updatePlayback() {
+                if (!this.isPlaying) return;
+
+                const currentTime = this.audioContext.currentTime - this.startTime;
+                const duration = this.currentSong.audioBuffer.duration;
+
+                const percent = (currentTime / duration) * 100;
+                this.progressFill.style.width = percent + '%';
+                this.currentTimeEl.textContent = this.formatTime(currentTime);
+
+                this.animationFrame = requestAnimationFrame(() => this.updatePlayback());
+            }
+
+            updateDots(index) {
+                this.beatDots.forEach((dot, i) => {
+                    dot.classList.remove('current');
+                    if (i === index) {
+                        dot.classList.add('current');
+                    }
+                });
+            }
+
+            clearDots() {
+                this.beatDots.forEach(dot => dot.classList.remove('current'));
+            }
+
+            formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
             }
 
             selectBestVoice() {
                 const voices = this.synth.getVoices();
                 if (voices.length === 0) return;
 
-                // Prefer natural/enhanced voices
-                const preferred = [
-                    'Samantha', // iOS/Mac - very natural
-                    'Karen',    // Australian - soft
-                    'Moira',    // Irish - gentle
-                    'Tessa',    // South African
-                    'Fiona',    // Scottish
-                    'Daniel',   // British - calm
-                    'Google',   // Google voices are decent
-                ];
+                const preferred = ['Samantha', 'Karen', 'Moira', 'Tessa', 'Fiona', 'Daniel', 'Google'];
 
                 for (const name of preferred) {
                     const voice = voices.find(v => v.name.includes(name));
@@ -1390,38 +1140,25 @@
                     }
                 }
 
-                // Fallback to first English voice
                 const englishVoice = voices.find(v => v.lang.startsWith('en'));
                 if (englishVoice) {
                     this.selectedVoice = englishVoice;
                 }
             }
 
-            updateVolumeDisplay() {
-                const scaled = this.smoothedVolume / Math.max(this.maxObservedVolume, 0.01);
-                const percent = Math.min(100, scaled * 100);
-                this.volumeBar.style.width = percent + '%';
-                this.volumePercent.textContent = Math.round(percent) + '%';
+            showProcessing(text, detail) {
+                this.processingText.textContent = text;
+                this.processingDetail.textContent = detail;
+                this.processingOverlay.classList.add('active');
             }
 
-            updateUI() {
-                if (this.isListening) {
-                    this.controlButton.textContent = 'Stop';
-                    this.controlButton.classList.add('listening');
-                } else {
-                    this.controlButton.textContent = 'Start Listening';
-                    this.controlButton.classList.remove('listening');
-                }
-            }
-
-            updateStatus(text, type) {
-                this.statusBadge.textContent = text;
-                this.statusBadge.className = 'status-badge status-' + type;
+            hideProcessing() {
+                this.processingOverlay.classList.remove('active');
             }
         }
 
         window.addEventListener('load', () => {
-            new BeatCounter();
+            new BeatCounterApp();
         });
     </script>
 </body>

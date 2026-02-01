@@ -1,7 +1,7 @@
 # 8-Count Beat Counter App
 
 ## Overview
-A web-based app that listens to music via microphone, detects beats using spectral flux analysis, locks onto tempo, and counts aloud 1-8 using text-to-speech. Designed for dancers practicing with swing music.
+A web-based app that loads MP3 files, analyzes them offline to detect beats, validates 8-count phrase distribution, and plays the music with synchronized voice counting. Designed for dancers practicing with swing music.
 
 ## File Structure
 - `index.html` - Single file containing all HTML, CSS, and JavaScript
@@ -10,116 +10,107 @@ A web-based app that listens to music via microphone, detects beats using spectr
 
 ### Core Flow
 ```
-Microphone → Web Audio API → Meyda.js (RMS) + AnalyserNode (FFT)
-                                    ↓
-                        Band Energy + Spectral Flux Calculation
-                                    ↓
-                        Onset Detection (flux threshold)
-                                    ↓
-                        Per-Band Tempo Lock (consistency check)
-                                    ↓
-                        Predictive Counting (setTimeout per band)
-                                    ↓
-                        Speech Synthesis (count aloud)
+MP3 File → Web Audio API (decodeAudioData)
+                ↓
+        Offline Beat Analysis (spectral flux)
+                ↓
+        BPM Detection (histogram + median)
+                ↓
+        8-Count Validation (fill gaps, verify distribution)
+                ↓
+        Playback with Scheduled Counts (setTimeout)
+                ↓
+        Speech Synthesis (count aloud 1-8)
 ```
 
 ### Key Classes
-- `BeatCounter` - Main class containing all logic
+- `BeatCounterApp` - Main class containing all logic
 
-### Beat Detection (Spectral Flux)
-1. Meyda extracts RMS (root mean square) for overall volume
-2. AnalyserNode provides FFT data for frequency bands
-3. **Spectral Flux** calculated per band: `flux = max(0, currentEnergy - previousEnergy)`
-   - Detects energy CHANGES (onsets) not just energy levels
-   - More robust for detecting beat attacks vs sustained sounds
-4. Flux compared against adaptive threshold (avg flux × sensitivity)
-5. Minimum 0.1s between beats (prevents double-triggers)
+### Beat Detection (Offline Analysis)
+1. Audio file decoded to AudioBuffer via `decodeAudioData()`
+2. Process mono channel data in frames (20ms frames, 10ms hops)
+3. Calculate energy per frame: `sqrt(sum(sample²) / frameSize)`
+4. **Spectral Flux**: `flux = max(0, currentEnergy - previousEnergy)`
+5. Normalize flux values to 0-1 range
+6. Peak picking with adaptive threshold (local average + 0.3)
+7. Minimum 0.2s between beats (300 BPM max)
 
-### Frequency Bands (12 Instrument-Focused)
-| Band | Frequency | Target Sound |
-|------|-----------|--------------|
-| SubBass | 30-60 Hz | Kick fundamental |
-| Kick | 60-100 Hz | Kick body |
-| Punch | 100-150 Hz | Kick punch |
-| Snare | 150-250 Hz | Snare body |
-| Crack | 250-400 Hz | Snare crack |
-| Mids | 400-800 Hz | General mids |
-| Presence | 800-1.6 kHz | Vocal presence |
-| Snap | 1.6-3.2 kHz | Snare snap |
-| HiHat | 3.2-6 kHz | Hi-hat body |
-| Air | 6-10 kHz | Hi-hat shimmer |
-| Sparkle | 10-16 kHz | High sparkle |
-| Ultra | 16-20 kHz | Ultra high |
+### BPM Detection
+1. Calculate intervals between detected beats
+2. Build histogram of BPM values (rounded to nearest 5)
+3. Find most common BPM bucket
+4. Refine using median of intervals within 20% of detected BPM
 
-**For swing music**: Kick/Punch (bass) and HiHat bands work best.
-
-### Dynamic Band Discovery
-- Bands start hidden until they detect beats
-- Shows only active bands (reduces visual clutter)
-- "Show All Bands" toggle to see all 12
-- Each band shows consistency % while learning, BPM when locked
-
-### Per-Band Tempo Locking
-Each band independently:
-1. Tracks its own beat intervals
-2. Calculates consistency score
-3. Locks when N consistent beats detected (uses "Beats to Lock" slider)
-4. Once locked, counts predictively (1-8) without resetting
-5. Visual indicator: yellow border = locked
-
-### Main Counter
-The main display simply follows the selected band:
-1. When "Use All" is active, auto-selects first locked band
-2. Tap a band to select it manually
-3. Main counter mirrors the selected band's count and speaks aloud
-4. Shows BPM and band name when locked
+### 8-Count Validation
+The app validates and corrects beat distribution:
+1. If too few beats detected (<16), generate from BPM
+2. Check each detected beat against expected timing
+3. Fill in missing beats at expected intervals
+4. Ensure even distribution across the song
 
 ### Counting Logic
+- Beats indexed 0 to N, count = (index % 8) + 1
+- Counts scheduled via `setTimeout()` at beat times
 - Always sequential: 1→2→3→4→5→6→7→8→1...
-- Never skips or repeats numbers
-- Accent detection can shift where "1" falls (requires 3+ consistent accents)
+- Visual pulse and accent highlighting on beat 1
 
 ### Voice Output
 - Uses Web Speech API (SpeechSynthesis)
 - Prefers natural voices: Samantha, Karen, Daniel
-- Softer volume (0.5), relaxed rate (1.4)
+- Adjustable voice volume (default 70%)
 - Slight pitch up on beat 1
 
-## Key Settings (User Adjustable)
+## User Interface
+
+### File Selection
+- Click or drag-and-drop MP3 files
+- Multiple files supported
+- Song list shows processing status and BPM
+
+### Player Controls
+- Play/Pause button
+- Stop button (resets to beginning)
+- Progress bar with seek (click to jump)
+- Voice volume slider
+- Music volume slider
+
+### Display
+- Large beat indicator (1-8)
+- 8 beat dots showing current position
+- BPM, total beats, and phrase count
+- Current time / total duration
+
+## Processing States
+1. **Click to process** - File loaded, not yet analyzed
+2. **Processing** - Analyzing beats (shows overlay)
+3. **Ready** - Analysis complete, can play
+
+## Key Settings
 | Setting | Default | Range | Purpose |
 |---------|---------|-------|---------|
-| Onset Threshold | 1.8 | 1.0-3.0 | Higher = less sensitive to onsets |
-| Beats to Lock | 4 | 2-8 | Beats needed before tempo locks |
-| Tempo Tolerance | 25% | 10-50% | How consistent beats must be |
+| Voice Volume | 70% | 0-100% | How loud the counting voice is |
+| Music Volume | 100% | 0-100% | How loud the music plays |
 
-## State Variables
-### Global
-- `isTempoLocked` - Whether main counting has started
-- `lockedInterval` - Beat interval in seconds
-- `lockedBPM` - Beats per minute
-- `currentCount` - Current position (0-7, displayed as 1-8)
+## Technical Details
 
-### Per-Band Arrays (12 elements each)
-- `bandEnergies` - Current energy level
-- `bandFlux` - Spectral flux (energy change)
-- `bandFluxHistories` - Rolling flux history for threshold
-- `bandTempoLocked` - Whether this band is locked
-- `bandLockedInterval` - Locked interval for this band
-- `bandBeatCount` - This band's 1-8 count
-- `bandConsistencyScore` - 0-100% consistency
+### Beat Detection Parameters
+- Frame size: 20ms
+- Hop size: 10ms (50% overlap)
+- Flux threshold: local average + 0.3
+- Min beat interval: 0.2s (300 BPM max)
+- BPM range: 40-240 BPM
 
-## Debug Panel
-Click "Show Debug" to see:
-- Volume levels and energy values
-- Beat detections with threshold comparisons
-- Interval calculations
-- Consistency checks and lock status
+### Audio Playback
+- Uses Web Audio API BufferSource
+- GainNode for volume control
+- Precise timing via audioContext.currentTime
+- Counts scheduled relative to playback start
 
 ## Common Issues
-1. **Won't lock**: Beats too inconsistent. Try Kick/Punch band, lower sensitivity, or increase tolerance
-2. **False beats**: Sensitivity too low or wrong frequency band
-3. **No volume**: Check microphone permissions, Min Volume setting
-4. **No bands showing**: Music may not have clear beats in those frequencies; try "Show All Bands"
+1. **Wrong BPM detected**: Try songs with clearer beats; very complex rhythms may confuse detection
+2. **Counts not aligned**: The first detected beat becomes beat 1; seek to adjust
+3. **No voice output**: Check browser permissions and voice volume slider
+4. **File won't load**: Ensure it's a valid audio format (MP3, WAV, etc.)
 
 ## Deployment
 - **GitHub Pages**: https://s-quatres.github.io/qcount/
