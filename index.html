@@ -893,66 +893,81 @@
 
             findPhraseAlignment(beats, audioBuffer) {
                 // Find the best offset (0-7) so that "1" falls on accented beats
-                // Strategy: find the loudest beats and see which position they cluster on
+                // Strategy: use LOW FREQUENCY energy (bass/kick) which typically hits on beat 1
 
-                if (beats.length < 24) {
+                if (beats.length < 32) {
                     return 0; // Not enough beats to analyze
                 }
 
                 const channelData = audioBuffer.getChannelData(0);
                 const sampleRate = audioBuffer.sampleRate;
 
-                // Skip first 8 beats (potential intro) and analyze the rest
-                const startBeat = Math.min(8, Math.floor(beats.length * 0.1));
+                // Skip first 20 beats (potential intro)
+                const startBeat = 20;
                 const analysisBeats = beats.slice(startBeat);
 
-                // Measure RMS energy at each beat (100ms window)
-                const windowSamples = Math.floor(sampleRate * 0.1);
-                const beatEnergies = [];
+                // Simple low-pass filter to extract bass frequencies (~60-150Hz)
+                // We'll measure energy after applying a moving average (crude low-pass)
+                const windowMs = 100; // 100ms window
+                const windowSamples = Math.floor(sampleRate * windowMs / 1000);
 
-                for (const beat of analysisBeats) {
+                // For low-frequency detection, we look at the smoothed signal
+                // A simple approach: measure how much the signal swings (peak-to-peak) in bass range
+                const beatBassEnergy = [];
+
+                for (let idx = 0; idx < analysisBeats.length; idx++) {
+                    const beat = analysisBeats[idx];
                     const centerSample = Math.floor(beat.time * sampleRate);
-                    const startSample = Math.max(0, centerSample - windowSamples / 2);
-                    const endSample = Math.min(channelData.length, centerSample + windowSamples / 2);
+                    const start = Math.max(0, centerSample - windowSamples / 2);
+                    const end = Math.min(channelData.length, centerSample + windowSamples / 2);
 
-                    let energy = 0;
-                    for (let i = startSample; i < endSample; i++) {
-                        energy += channelData[i] * channelData[i];
+                    // Apply simple low-pass by averaging chunks (extracts bass)
+                    const chunkSize = Math.floor(sampleRate / 150); // ~150Hz cutoff
+                    let bassEnergy = 0;
+                    let chunks = 0;
+
+                    for (let i = start; i < end - chunkSize; i += chunkSize) {
+                        let chunkSum = 0;
+                        for (let j = 0; j < chunkSize; j++) {
+                            chunkSum += channelData[i + j];
+                        }
+                        const chunkAvg = chunkSum / chunkSize;
+                        bassEnergy += chunkAvg * chunkAvg;
+                        chunks++;
                     }
-                    energy = Math.sqrt(energy / (endSample - startSample));
-                    beatEnergies.push({ index: startBeat + beatEnergies.length, energy });
+
+                    bassEnergy = chunks > 0 ? Math.sqrt(bassEnergy / chunks) : 0;
+                    beatBassEnergy.push({ index: startBeat + idx, bass: bassEnergy });
                 }
 
-                // Sort by energy to find the loudest beats
-                const sortedByEnergy = [...beatEnergies].sort((a, b) => b.energy - a.energy);
+                // Find average bass energy
+                const avgBass = beatBassEnergy.reduce((sum, b) => sum + b.bass, 0) / beatBassEnergy.length;
 
-                // Take top 25% loudest beats as "accents"
-                const accentCount = Math.max(8, Math.floor(beatEnergies.length * 0.25));
-                const accents = sortedByEnergy.slice(0, accentCount);
+                // Find beats with above-average bass (bass drum hits)
+                const bassHits = beatBassEnergy.filter(b => b.bass > avgBass * 1.1);
 
-                // Count how many accents fall on each position (0-7)
+                // Count which position bass hits fall on
                 const positionCounts = [0, 0, 0, 0, 0, 0, 0, 0];
-                for (const accent of accents) {
-                    const position = accent.index % 8;
+                for (const hit of bassHits) {
+                    const position = hit.index % 8;
                     positionCounts[position]++;
                 }
 
-                // Find which position has the most accents - this should be beat 1
+                // Find which position has the most bass hits - this should be beat 1
                 let maxCount = 0;
-                let accentPosition = 0;
+                let bassPosition = 0;
                 for (let i = 0; i < 8; i++) {
                     if (positionCounts[i] > maxCount) {
                         maxCount = positionCounts[i];
-                        accentPosition = i;
+                        bassPosition = i;
                     }
                 }
 
-                // The offset needed to make accentPosition become position 0 (beat 1)
-                // If accents fall on position 3, we need offset 8-3=5 so that index 3 becomes (3+5)%8=0
-                const bestOffset = (8 - accentPosition) % 8;
+                // The offset needed to make bassPosition become position 0 (beat 1)
+                const bestOffset = (8 - bassPosition) % 8;
 
-                console.log(`Accent position counts:`, positionCounts.map((c, i) => `${i}:${c}`).join(', '));
-                console.log(`Most accents at position ${accentPosition}, using offset ${bestOffset}`);
+                console.log(`Bass hit position counts:`, positionCounts.map((c, i) => `${i}:${c}`).join(', '));
+                console.log(`Most bass at position ${bassPosition}, using offset ${bestOffset}`);
 
                 return bestOffset;
             }
