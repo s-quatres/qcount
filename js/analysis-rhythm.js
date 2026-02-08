@@ -3,7 +3,7 @@
 // High onset density at a consistent position = rhythmic accent = phrase boundary
 
 BeatCounterApp.prototype.computeRhythmPattern = function(bands, beats) {
-    if (beats.length < 32) return { bandPatterns: [], combinedPattern: new Float32Array(8), phraseOffset: 0 };
+    if (beats.length < 32) return { bandPatterns: [], combinedPattern: new Float32Array(8), phraseOffset: 0, confidence: 0 };
 
     const hopSec = this.ENVELOPE_HOP_MS / 1000;
     const startBeat = Math.min(16, Math.floor(beats.length * 0.1));

@@ -286,6 +286,41 @@ BeatCounterApp.prototype.updatePlayerUI = function() {
 
     this.currentCountEl.textContent = '-';
     this.currentTimeEl.textContent = '0:00';
+
+    this.updateMethodButtons();
+};
+
+BeatCounterApp.prototype.updateMethodButtons = function() {
+    const song = this.currentSong;
+    document.querySelectorAll('.method-btn').forEach(btn => {
+        const method = btn.dataset.method;
+        let confText = '';
+        if (song && song.processed && song.analysis) {
+            let conf = 0;
+            switch (method) {
+                case 'energy': conf = song.bands[1].phraseConfidence || 0; break;
+                case 'harmony': conf = song.analysis.harmonyConfidence || 0; break;
+                case 'rhythm': conf = song.analysis.rhythmConfidence || 0; break;
+                case 'combined':
+                    // Show the winning confidence from the combined result
+                    const data = song.analysis.combinedData;
+                    if (data && data.methods) {
+                        const winner = data.methods.reduce((a, b) => a.confidence > b.confidence ? a : b, { confidence: 0 });
+                        conf = winner.confidence;
+                    }
+                    break;
+            }
+            confText = ' ' + Math.round(conf * 100) + '%';
+        }
+        // Update or create the confidence span
+        let confSpan = btn.querySelector('.method-conf');
+        if (!confSpan) {
+            confSpan = document.createElement('span');
+            confSpan.className = 'method-conf';
+            btn.appendChild(confSpan);
+        }
+        confSpan.textContent = confText;
+    });
 };
 
 // === INTERACTION METHODS ===
