@@ -35,7 +35,7 @@ BeatCounterApp.prototype.processSong = async function(song) {
             const validatedBeats = this.validate8Counts(beats, bpm, song.audioBuffer.duration);
 
             // Find phrase alignment
-            const phraseOffset = this.findBandPhraseAlignment(validatedBeats, envelope);
+            const phraseResult = this.findBandPhraseAlignment(validatedBeats, envelope);
 
             song.bands.push({
                 name: bandDef.name,
@@ -43,7 +43,8 @@ BeatCounterApp.prototype.processSong = async function(song) {
                 envelope: envelope,
                 beats: validatedBeats,
                 bpm: bpm,
-                phraseOffset: phraseOffset,
+                phraseOffset: phraseResult.offset,
+                phraseConfidence: phraseResult.confidence,
             });
         }
 
@@ -67,13 +68,16 @@ BeatCounterApp.prototype.processSong = async function(song) {
         const harmonyResult = this.computeBeatSyncChroma(song.analysis.chroma, song.beats);
         song.analysis.harmonyBeatDistances = harmonyResult.beatDistances;
         song.analysis.harmonyBeatChroma = harmonyResult.beatChroma;
-        song.analysis.harmonyPhraseOffset = this.findHarmonyPhraseOffset(harmonyResult.beatDistances, song.beats);
+        const harmonyPhrase = this.findHarmonyPhraseOffset(harmonyResult.beatDistances, song.beats);
+        song.analysis.harmonyPhraseOffset = harmonyPhrase.offset;
+        song.analysis.harmonyConfidence = harmonyPhrase.confidence;
 
         // 5. Rhythm: per-band onset patterns
         this.showProcessing('Computing rhythm analysis...', 'Per-band onset patterns');
         await new Promise(r => setTimeout(r, 10));
         song.analysis.rhythmData = this.computeRhythmPattern(song.bands, song.beats);
         song.analysis.rhythmPhraseOffset = song.analysis.rhythmData.phraseOffset;
+        song.analysis.rhythmConfidence = song.analysis.rhythmData.confidence;
 
         // 6. Combined: multi-feature weighted voting
         this.showProcessing('Computing combined analysis...', 'Multi-method voting');
@@ -81,11 +85,11 @@ BeatCounterApp.prototype.processSong = async function(song) {
         song.analysis.combinedData = this.computeCombinedPhraseOffset(song);
         song.analysis.combinedPhraseOffset = song.analysis.combinedData.phraseOffset;
 
-        // Log all phrase offsets for debugging
-        console.log('Phrase offsets:', {
-            energy: song.bands[1].phraseOffset,
-            harmony: song.analysis.harmonyPhraseOffset,
-            rhythm: song.analysis.rhythmPhraseOffset,
+        // Log all phrase offsets and confidences for debugging
+        console.log('Phrase offsets (confidence):', {
+            energy: song.bands[1].phraseOffset + ' (' + (song.bands[1].phraseConfidence * 100).toFixed(1) + '%)',
+            harmony: song.analysis.harmonyPhraseOffset + ' (' + (song.analysis.harmonyConfidence * 100).toFixed(1) + '%)',
+            rhythm: song.analysis.rhythmPhraseOffset + ' (' + (song.analysis.rhythmConfidence * 100).toFixed(1) + '%)',
             combined: song.analysis.combinedPhraseOffset,
         });
 
@@ -369,7 +373,7 @@ BeatCounterApp.prototype.generateBeatsFromBpm = function(bpm, duration, startTim
 
 BeatCounterApp.prototype.findBandPhraseAlignment = function(beats, envelope) {
     // Find best offset (0-7) so beat 1 aligns with highest energy in this band
-    if (beats.length < 32) return 0;
+    if (beats.length < 32) return { offset: 0, confidence: 0 };
 
     const hopSec = this.ENVELOPE_HOP_MS / 1000;
     const startBeat = Math.min(16, Math.floor(beats.length * 0.1));
@@ -410,13 +414,18 @@ BeatCounterApp.prototype.findBandPhraseAlignment = function(beats, envelope) {
     }
 
     let maxEnergy = 0;
+    let secondMax = 0;
     let bestPos = 0;
     for (let i = 0; i < 8; i++) {
         if (positionEnergy[i] > maxEnergy) {
+            secondMax = maxEnergy;
             maxEnergy = positionEnergy[i];
             bestPos = i;
+        } else if (positionEnergy[i] > secondMax) {
+            secondMax = positionEnergy[i];
         }
     }
 
-    return (8 - bestPos) % 8;
+    const confidence = maxEnergy > 0 ? (maxEnergy - secondMax) / maxEnergy : 0;
+    return { offset: (8 - bestPos) % 8, confidence };
 };

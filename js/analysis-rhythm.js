@@ -60,14 +60,22 @@ BeatCounterApp.prototype.computeRhythmPattern = function(bands, beats) {
     }
 
     // Best position = highest combined onset density
-    let maxVal = 0, bestPos = 0;
+    let maxVal = 0, secondMax = 0, bestPos = 0;
     for (let i = 0; i < 8; i++) {
-        if (combinedPattern[i] > maxVal) { maxVal = combinedPattern[i]; bestPos = i; }
+        if (combinedPattern[i] > maxVal) {
+            secondMax = maxVal;
+            maxVal = combinedPattern[i];
+            bestPos = i;
+        } else if (combinedPattern[i] > secondMax) {
+            secondMax = combinedPattern[i];
+        }
     }
 
+    const confidence = maxVal > 0 ? (maxVal - secondMax) / maxVal : 0;
     return {
         bandPatterns,
         combinedPattern,
-        phraseOffset: (8 - bestPos) % 8
+        phraseOffset: (8 - bestPos) % 8,
+        confidence
     };
 };

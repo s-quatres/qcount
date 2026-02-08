@@ -427,13 +427,13 @@ BeatCounterApp.prototype.drawCombinedOverlay = function(ctx, currentTime) {
     const windowEnd = currentTime + halfWindow;
 
     const methods = [
-        { name: 'Energy', color: '#ff6b6b', offset: song.bands[1].phraseOffset },
-        { name: 'Harmony', color: '#2ecc71', offset: song.analysis.harmonyPhraseOffset },
-        { name: 'Rhythm', color: '#e67e22', offset: song.analysis.rhythmPhraseOffset },
+        { name: 'Energy', color: '#ff6b6b', offset: song.bands[1].phraseOffset, confidence: song.bands[1].phraseConfidence || 0 },
+        { name: 'Harmony', color: '#2ecc71', offset: song.analysis.harmonyPhraseOffset, confidence: song.analysis.harmonyConfidence || 0 },
+        { name: 'Rhythm', color: '#e67e22', offset: song.analysis.rhythmPhraseOffset, confidence: song.analysis.rhythmConfidence || 0 },
     ];
 
     // Semi-transparent panel in top-left
-    const panelW = 280;
+    const panelW = 310;
     const panelH = 20 + methods.length * 22 + 10;
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath();
@@ -443,21 +443,24 @@ BeatCounterApp.prototype.drawCombinedOverlay = function(ctx, currentTime) {
     // Title
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.font = '9px sans-serif';
-    ctx.fillText('Method agreement — beat 1 position', 16, 22);
+    ctx.fillText('Method agreement — beat 1 position (confidence)', 16, 22);
 
     // Each method's vote
     for (let m = 0; m < methods.length; m++) {
         const method = methods[m];
         const y = 32 + m * 22;
         const methodBestPos = (8 - method.offset) % 8;
+        const confPct = Math.round(method.confidence * 100);
 
-        // Method name
+        // Method name + confidence
         ctx.fillStyle = method.color;
         ctx.font = '9px sans-serif';
         ctx.fillText(method.name, 16, y + 12);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillText(confPct + '%', 58, y + 12);
 
         // 8 position dots
-        const dotStart = 80;
+        const dotStart = 90;
         const dotSpacing = 22;
         for (let pos = 0; pos < 8; pos++) {
             const dx = dotStart + pos * dotSpacing;
@@ -468,7 +471,9 @@ BeatCounterApp.prototype.drawCombinedOverlay = function(ctx, currentTime) {
                 ctx.beginPath();
                 ctx.arc(dx, dy, 6, 0, Math.PI * 2);
                 ctx.fillStyle = method.color;
+                ctx.globalAlpha = 0.3 + method.confidence * 0.7;
                 ctx.fill();
+                ctx.globalAlpha = 1.0;
                 ctx.fillStyle = 'white';
                 ctx.font = 'bold 8px sans-serif';
                 ctx.textAlign = 'center';

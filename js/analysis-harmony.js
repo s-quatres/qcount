@@ -127,7 +127,7 @@ BeatCounterApp.prototype.computeBeatSyncChroma = function(chroma, beats) {
 
 BeatCounterApp.prototype.findHarmonyPhraseOffset = function(beatDistances, beats) {
     // Find the beat position (0-7) where chord changes cluster most
-    if (beats.length < 32) return 0;
+    if (beats.length < 32) return { offset: 0, confidence: 0 };
     const startBeat = Math.min(16, Math.floor(beats.length * 0.1));
 
     const positionScores = new Float64Array(8);
@@ -142,10 +142,19 @@ BeatCounterApp.prototype.findHarmonyPhraseOffset = function(beatDistances, beats
         positionCounts[pos]++;
     }
 
-    let maxAvg = 0, bestPos = 0;
+    const positionAvgs = new Float64Array(8);
+    let maxAvg = 0, secondMax = 0, bestPos = 0;
     for (let i = 0; i < 8; i++) {
-        const avg = positionCounts[i] > 0 ? positionScores[i] / positionCounts[i] : 0;
-        if (avg > maxAvg) { maxAvg = avg; bestPos = i; }
+        positionAvgs[i] = positionCounts[i] > 0 ? positionScores[i] / positionCounts[i] : 0;
+        if (positionAvgs[i] > maxAvg) {
+            secondMax = maxAvg;
+            maxAvg = positionAvgs[i];
+            bestPos = i;
+        } else if (positionAvgs[i] > secondMax) {
+            secondMax = positionAvgs[i];
+        }
     }
-    return (8 - bestPos) % 8;
+
+    const confidence = maxAvg > 0 ? (maxAvg - secondMax) / maxAvg : 0;
+    return { offset: (8 - bestPos) % 8, confidence };
 };
