@@ -4,6 +4,10 @@ BeatCounterApp.prototype.processSong = async function(song) {
     this.showProcessing('Loading audio...', song.name);
 
     try {
+        // Ensure AudioContext is active (Safari suspends it without user gesture)
+        if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
         const arrayBuffer = await song.file.arrayBuffer();
         song.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
