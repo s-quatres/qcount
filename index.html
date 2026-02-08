@@ -23,7 +23,7 @@
         }
 
         .container {
-            max-width: 600px;
+            max-width: 1200px;
             width: 100%;
         }
 
@@ -387,10 +387,126 @@
             margin-top: 15px;
         }
 
+        /* Visualization canvas */
+        .viz-container {
+            position: relative;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.3);
+        }
+
+        .viz-canvas {
+            width: 100%;
+            display: block;
+            cursor: crosshair;
+        }
+
+        .band-labels {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .band-label {
+            position: absolute;
+            left: 6px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* Compact controls row */
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .controls-row .controls {
+            margin-bottom: 0;
+        }
+
+        .controls-row .slider-container {
+            margin-top: 0;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        /* Beat count overlay */
+        .beat-overlay {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .beat-overlay .beat-indicator {
+            width: 80px;
+            height: 80px;
+            font-size: 2.2rem;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        .beat-overlay .phrase-display {
+            margin-bottom: 0;
+        }
+
+        .beat-overlay .info-compact {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        /* Method selector */
+        .method-selector {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .method-btn {
+            flex: 1 1 auto;
+            min-width: 0;
+            padding: 6px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+
+        .method-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+
+        .method-btn.active {
+            background: rgba(76, 217, 100, 0.3);
+            border-color: rgba(76, 217, 100, 0.6);
+            color: white;
+        }
+
+        .method-desc {
+            font-size: 0.65rem;
+            opacity: 0.6;
+            display: block;
+            font-weight: 400;
+        }
+
         @media (max-width: 480px) {
             h1 { font-size: 1.5rem; }
-            .beat-indicator { width: 120px; height: 120px; font-size: 3rem; }
+            .beat-overlay .beat-indicator { width: 60px; height: 60px; font-size: 1.8rem; }
             .beat-dot { width: 28px; height: 28px; font-size: 0.7rem; }
+            .method-btn { padding: 6px 8px; font-size: 0.65rem; }
         }
     </style>
 </head>
@@ -410,68 +526,70 @@
 
         <!-- Player Panel (hidden until song selected) -->
         <div class="panel" id="playerPanel" style="display: none;">
-            <div class="beat-indicator" id="beatIndicator">
-                <span id="currentCount">-</span>
-            </div>
-
-            <div class="phrase-display" id="phraseDisplay">
-                <div class="beat-dot accent-beat" data-beat="1">1</div>
-                <div class="beat-dot" data-beat="2">2</div>
-                <div class="beat-dot" data-beat="3">3</div>
-                <div class="beat-dot" data-beat="4">4</div>
-                <div class="beat-dot" data-beat="5">5</div>
-                <div class="beat-dot" data-beat="6">6</div>
-                <div class="beat-dot" data-beat="7">7</div>
-                <div class="beat-dot" data-beat="8">8</div>
-            </div>
-
-            <div class="progress-container">
-                <div class="progress-bar" id="progressBar">
-                    <div class="progress-fill" id="progressFill"></div>
+            <!-- Beat count + phrase dots + info -->
+            <div class="beat-overlay">
+                <div class="beat-indicator" id="beatIndicator">
+                    <span id="currentCount">-</span>
                 </div>
-                <div class="time-display">
-                    <span id="currentTime">0:00</span>
-                    <span id="totalTime">0:00</span>
+                <div>
+                    <div class="phrase-display" id="phraseDisplay">
+                        <div class="beat-dot accent-beat" data-beat="1">1</div>
+                        <div class="beat-dot" data-beat="2">2</div>
+                        <div class="beat-dot" data-beat="3">3</div>
+                        <div class="beat-dot" data-beat="4">4</div>
+                        <div class="beat-dot" data-beat="5">5</div>
+                        <div class="beat-dot" data-beat="6">6</div>
+                        <div class="beat-dot" data-beat="7">7</div>
+                        <div class="beat-dot" data-beat="8">8</div>
+                    </div>
+                    <div class="info-compact">
+                        <span id="bpmValue">--</span> BPM &nbsp;|&nbsp;
+                        <span id="beatsValue">--</span> beats &nbsp;|&nbsp;
+                        <span id="phrasesValue">--</span> phrases &nbsp;|&nbsp;
+                        <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="controls">
-                <button class="control-btn play-btn" id="playBtn" disabled>Process First</button>
-                <button class="control-btn stop-btn" id="stopBtn">Stop</button>
+            <!-- Method selector -->
+            <div class="method-selector" id="methodSelector">
+                <button class="method-btn active" data-method="energy">Energy<span class="method-desc">volume accents</span></button>
+                <button class="method-btn" data-method="harmony">Harmony<span class="method-desc">beat chords</span></button>
+                <button class="method-btn" data-method="rhythm">Rhythm<span class="method-desc">onset pattern</span></button>
+                <button class="method-btn" data-method="combined">Combined<span class="method-desc">all methods</span></button>
             </div>
 
-            <div class="info-row">
-                <span class="info-label">BPM</span>
-                <span class="info-value" id="bpmValue">--</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Beats Detected</span>
-                <span class="info-value" id="beatsValue">--</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">8-Count Phrases</span>
-                <span class="info-value" id="phrasesValue">--</span>
+            <!-- Visualization -->
+            <div class="viz-container" id="vizContainer">
+                <canvas class="viz-canvas" id="vizCanvas"></canvas>
+                <div class="band-labels" id="bandLabels"></div>
             </div>
 
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Voice Volume</span>
-                    <span id="voiceVolValue">70%</span>
+            <!-- Controls row -->
+            <div class="controls-row">
+                <div class="controls">
+                    <button class="control-btn play-btn" id="playBtn" disabled>Process First</button>
+                    <button class="control-btn stop-btn" id="stopBtn">Stop</button>
                 </div>
-                <input type="range" min="0" max="100" value="70" id="voiceVolSlider">
-            </div>
-
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Music Volume</span>
-                    <span id="musicVolValue">100%</span>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Voice</span>
+                        <span id="voiceVolValue">70%</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="70" id="voiceVolSlider">
                 </div>
-                <input type="range" min="0" max="100" value="100" id="musicVolSlider">
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Music</span>
+                        <span id="musicVolValue">100%</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="100" id="musicVolSlider">
+                </div>
             </div>
         </div>
 
         <p class="instructions">
-            Select MP3 files to analyze. The app will detect beats, find 8-count phrases, and count along with the music.
+            Select MP3 files to analyze. Click graph to seek. Shift-click a beat to set it as "1".
         </p>
     </div>
 
@@ -484,819 +602,13 @@
         </div>
     </div>
 
-    <script>
-        class BeatCounterApp {
-            constructor() {
-                this.audioContext = null;
-                this.songs = []; // {name, file, audioBuffer, beats, bpm, phraseOffset, processed}
-                this.currentSong = null;
-                this.isPlaying = false;
-                this.sourceNode = null;
-                this.gainNode = null;
-                this.startTime = 0;
-                this.pauseTime = 0;
-                this.animationFrame = null;
-                this.scheduledCounts = [];
-                this.currentCount = 0;
-
-                // Voice
-                this.synth = window.speechSynthesis;
-                this.selectedVoice = null;
-                this.voiceVolume = 0.7;
-                this.musicVolume = 1.0;
-
-                // UI Elements
-                this.fileInput = document.getElementById('fileInput');
-                this.fileBtn = document.getElementById('fileBtn');
-                this.songList = document.getElementById('songList');
-                this.playerPanel = document.getElementById('playerPanel');
-                this.playBtn = document.getElementById('playBtn');
-                this.stopBtn = document.getElementById('stopBtn');
-                this.progressBar = document.getElementById('progressBar');
-                this.progressFill = document.getElementById('progressFill');
-                this.currentTimeEl = document.getElementById('currentTime');
-                this.totalTimeEl = document.getElementById('totalTime');
-                this.beatIndicator = document.getElementById('beatIndicator');
-                this.currentCountEl = document.getElementById('currentCount');
-                this.bpmValue = document.getElementById('bpmValue');
-                this.beatsValue = document.getElementById('beatsValue');
-                this.phrasesValue = document.getElementById('phrasesValue');
-                this.voiceVolSlider = document.getElementById('voiceVolSlider');
-                this.voiceVolValue = document.getElementById('voiceVolValue');
-                this.musicVolSlider = document.getElementById('musicVolSlider');
-                this.musicVolValue = document.getElementById('musicVolValue');
-                this.processingOverlay = document.getElementById('processingOverlay');
-                this.processingText = document.getElementById('processingText');
-                this.processingDetail = document.getElementById('processingDetail');
-                this.beatDots = document.querySelectorAll('.beat-dot');
-
-                this.bindEvents();
-                this.selectBestVoice();
-            }
-
-            bindEvents() {
-                // File input
-                this.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
-
-                // Drag and drop
-                this.fileBtn.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    this.fileBtn.style.borderColor = 'rgba(255,255,255,0.8)';
-                    this.fileBtn.style.background = 'rgba(255,255,255,0.2)';
-                });
-
-                this.fileBtn.addEventListener('dragleave', () => {
-                    this.fileBtn.style.borderColor = 'rgba(255,255,255,0.4)';
-                    this.fileBtn.style.background = 'rgba(255,255,255,0.1)';
-                });
-
-                this.fileBtn.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    this.fileBtn.style.borderColor = 'rgba(255,255,255,0.4)';
-                    this.fileBtn.style.background = 'rgba(255,255,255,0.1)';
-                    this.handleFiles(e.dataTransfer.files);
-                });
-
-                // Playback controls
-                this.playBtn.addEventListener('click', () => this.togglePlay());
-                this.stopBtn.addEventListener('click', () => this.stop());
-
-                // Progress bar seek
-                this.progressBar.addEventListener('click', (e) => {
-                    if (!this.currentSong || !this.currentSong.processed) return;
-                    const rect = this.progressBar.getBoundingClientRect();
-                    const percent = (e.clientX - rect.left) / rect.width;
-                    this.seek(percent * this.currentSong.audioBuffer.duration);
-                });
-
-                // Volume sliders
-                this.voiceVolSlider.addEventListener('input', (e) => {
-                    this.voiceVolume = e.target.value / 100;
-                    this.voiceVolValue.textContent = e.target.value + '%';
-                });
-
-                this.musicVolSlider.addEventListener('input', (e) => {
-                    this.musicVolume = e.target.value / 100;
-                    this.musicVolValue.textContent = e.target.value + '%';
-                    if (this.gainNode) {
-                        this.gainNode.gain.value = this.musicVolume;
-                    }
-                });
-
-                // Voice selection
-                if (this.synth.onvoiceschanged !== undefined) {
-                    this.synth.onvoiceschanged = () => this.selectBestVoice();
-                }
-            }
-
-            async handleFiles(files) {
-                if (!this.audioContext) {
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                }
-
-                for (const file of files) {
-                    if (!file.type.startsWith('audio/')) continue;
-
-                    // Check if already added
-                    if (this.songs.find(s => s.name === file.name)) continue;
-
-                    const song = {
-                        name: file.name,
-                        file: file,
-                        audioBuffer: null,
-                        beats: [],
-                        bpm: 0,
-                        processed: false
-                    };
-
-                    this.songs.push(song);
-                }
-
-                this.renderSongList();
-            }
-
-            renderSongList() {
-                this.songList.innerHTML = '';
-
-                for (const song of this.songs) {
-                    const item = document.createElement('div');
-                    item.className = 'song-item';
-                    if (this.currentSong === song) {
-                        item.classList.add('selected');
-                    }
-                    if (song.processed) {
-                        item.classList.add('ready');
-                    }
-
-                    let statusText = 'Click to process';
-                    if (song.processed) {
-                        statusText = 'Ready';
-                    }
-
-                    item.innerHTML = `
-                        <span class="song-name">${song.name}</span>
-                        ${song.processed ? `<span class="song-bpm">${song.bpm} BPM</span>` : ''}
-                        <span class="song-status">${statusText}</span>
-                    `;
-
-                    item.addEventListener('click', () => this.selectSong(song));
-                    this.songList.appendChild(item);
-                }
-            }
-
-            async selectSong(song) {
-                this.stop();
-                this.currentSong = song;
-                this.playerPanel.style.display = 'block';
-                this.renderSongList();
-
-                if (!song.processed) {
-                    await this.processSong(song);
-                }
-
-                this.updatePlayerUI();
-            }
-
-            async processSong(song) {
-                this.showProcessing('Loading audio...', song.name);
-
-                try {
-                    // Load audio buffer
-                    const arrayBuffer = await song.file.arrayBuffer();
-                    song.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-
-                    this.showProcessing('Analyzing beats...', 'This may take a moment');
-
-                    // Detect beats
-                    const analysis = await this.analyzeBeats(song.audioBuffer);
-                    song.beats = analysis.beats;
-                    song.bpm = analysis.bpm;
-
-                    this.showProcessing('Validating 8-counts...', `Found ${song.beats.length} beats at ${song.bpm} BPM`);
-
-                    // Validate and adjust beats for proper 8-count distribution
-                    song.beats = this.validate8Counts(song.beats, song.bpm, song.audioBuffer.duration);
-
-                    this.showProcessing('Finding phrase alignment...', 'Detecting accented beats');
-
-                    // Find where "1" should fall based on accent patterns
-                    song.phraseOffset = this.findPhraseAlignment(song.beats, song.audioBuffer);
-
-                    song.processed = true;
-                    this.hideProcessing();
-                    this.renderSongList();
-
-                } catch (error) {
-                    console.error('Error processing song:', error);
-                    this.hideProcessing();
-                    alert('Error processing audio file: ' + error.message);
-                }
-            }
-
-            async analyzeBeats(audioBuffer) {
-                // Get mono audio data
-                const channelData = audioBuffer.getChannelData(0);
-                const sampleRate = audioBuffer.sampleRate;
-
-                // Parameters for beat detection
-                const hopSize = Math.floor(sampleRate * 0.01); // 10ms hops
-                const frameSize = Math.floor(sampleRate * 0.02); // 20ms frames
-
-                // Calculate spectral flux for onset detection
-                const fluxValues = [];
-                const energyValues = [];
-                let prevSpectrum = null;
-
-                // Use smaller FFT for efficiency
-                const fftSize = 1024;
-                const offlineCtx = new OfflineAudioContext(1, audioBuffer.length, sampleRate);
-                const analyser = offlineCtx.createAnalyser();
-                analyser.fftSize = fftSize;
-
-                // Process in chunks to calculate flux
-                for (let i = 0; i < channelData.length - frameSize; i += hopSize) {
-                    // Calculate frame energy
-                    let energy = 0;
-                    for (let j = 0; j < frameSize; j++) {
-                        energy += channelData[i + j] * channelData[i + j];
-                    }
-                    energy = Math.sqrt(energy / frameSize);
-                    energyValues.push(energy);
-
-                    // Simple spectral flux approximation using energy difference
-                    if (energyValues.length > 1) {
-                        const flux = Math.max(0, energy - energyValues[energyValues.length - 2]);
-                        fluxValues.push({ time: i / sampleRate, flux, energy });
-                    }
-                }
-
-                // Normalize flux values
-                const maxFlux = Math.max(...fluxValues.map(f => f.flux));
-                fluxValues.forEach(f => f.flux = f.flux / maxFlux);
-
-                // Peak picking with adaptive threshold
-                const beats = [];
-                const windowSize = 10; // samples for local average
-                const threshold = 0.3;
-                const minBeatInterval = 0.2; // 300 BPM max
-
-                for (let i = windowSize; i < fluxValues.length - windowSize; i++) {
-                    const current = fluxValues[i];
-
-                    // Local average
-                    let localAvg = 0;
-                    for (let j = i - windowSize; j <= i + windowSize; j++) {
-                        localAvg += fluxValues[j].flux;
-                    }
-                    localAvg /= (windowSize * 2 + 1);
-
-                    // Is this a peak above threshold?
-                    const isLocalMax = current.flux > fluxValues[i - 1].flux &&
-                                       current.flux > fluxValues[i + 1].flux;
-                    const aboveThreshold = current.flux > localAvg + threshold;
-
-                    if (isLocalMax && aboveThreshold) {
-                        // Check minimum interval
-                        if (beats.length === 0 || current.time - beats[beats.length - 1].time > minBeatInterval) {
-                            beats.push({ time: current.time, energy: current.energy });
-                        }
-                    }
-                }
-
-                // Calculate BPM from beat intervals
-                const intervals = [];
-                for (let i = 1; i < beats.length; i++) {
-                    const interval = beats[i].time - beats[i - 1].time;
-                    if (interval > 0.25 && interval < 1.5) { // 40-240 BPM range
-                        intervals.push(interval);
-                    }
-                }
-
-                // Find most common interval (histogram approach)
-                const bpmHistogram = {};
-                for (const interval of intervals) {
-                    const bpm = Math.round(60 / interval);
-                    // Round to nearest 5 BPM for grouping
-                    const roundedBpm = Math.round(bpm / 5) * 5;
-                    bpmHistogram[roundedBpm] = (bpmHistogram[roundedBpm] || 0) + 1;
-                }
-
-                let bestBpm = 120; // Default
-                let bestCount = 0;
-                for (const [bpm, count] of Object.entries(bpmHistogram)) {
-                    if (count > bestCount) {
-                        bestCount = count;
-                        bestBpm = parseInt(bpm);
-                    }
-                }
-
-                // Refine BPM using median of intervals near the detected BPM
-                const targetInterval = 60 / bestBpm;
-                const nearIntervals = intervals.filter(i =>
-                    Math.abs(i - targetInterval) / targetInterval < 0.2
-                );
-
-                if (nearIntervals.length > 0) {
-                    nearIntervals.sort((a, b) => a - b);
-                    const medianInterval = nearIntervals[Math.floor(nearIntervals.length / 2)];
-                    bestBpm = Math.round(60 / medianInterval);
-                }
-
-                return { beats, bpm: bestBpm };
-            }
-
-            validate8Counts(beats, bpm, duration) {
-                // Thorough analysis: create a plan and fit it to the actual beats
-
-                if (beats.length < 16) {
-                    console.log('Too few beats detected, generating from BPM');
-                    return this.generateBeatsFromBpm(bpm, duration);
-                }
-
-                console.log(`\n=== BEAT PLAN ANALYSIS ===`);
-                console.log(`Detected ${beats.length} beats, initial BPM estimate: ${bpm}`);
-
-                // Step 1: Refine BPM by analyzing intervals across the whole song
-                const intervals = [];
-                for (let i = 1; i < beats.length; i++) {
-                    intervals.push(beats[i].time - beats[i - 1].time);
-                }
-
-                // Filter to reasonable intervals (40-200 BPM range)
-                const validIntervals = intervals.filter(i => i > 0.3 && i < 1.5);
-
-                // Check for double-time: if most intervals are around half the expected
-                const expectedInterval = 60 / bpm;
-                const halfIntervals = validIntervals.filter(i => i < expectedInterval * 0.7);
-                const normalIntervals = validIntervals.filter(i => i >= expectedInterval * 0.7 && i <= expectedInterval * 1.3);
-
-                let refinedInterval = expectedInterval;
-                if (halfIntervals.length > normalIntervals.length * 2) {
-                    // Detected at double tempo, halve it
-                    refinedInterval = expectedInterval / 2;
-                    console.log(`Detected double-time, adjusting interval from ${expectedInterval.toFixed(3)}s to ${refinedInterval.toFixed(3)}s`);
-                } else if (normalIntervals.length > 10) {
-                    // Use median of normal intervals
-                    normalIntervals.sort((a, b) => a - b);
-                    refinedInterval = normalIntervals[Math.floor(normalIntervals.length / 2)];
-                }
-
-                const refinedBpm = Math.round(60 / refinedInterval);
-                console.log(`Refined BPM: ${refinedBpm} (interval: ${refinedInterval.toFixed(3)}s)`);
-
-                // Step 2: Find the best starting point by testing different offsets
-                const startTime = beats[0].time;
-                const endTime = duration - 0.5;
-
-                // Test multiple start offsets to find best alignment
-                let bestStartOffset = 0;
-                let bestMatchScore = -Infinity;
-
-                for (let testOffset = 0; testOffset < refinedInterval; testOffset += refinedInterval / 16) {
-                    let score = 0;
-                    let gridTime = startTime + testOffset;
-
-                    while (gridTime < Math.min(endTime, startTime + 30)) { // Test first 30 seconds
-                        // Find nearest detected beat
-                        let minDist = Infinity;
-                        for (const beat of beats) {
-                            const dist = Math.abs(beat.time - gridTime);
-                            if (dist < minDist) minDist = dist;
-                        }
-                        // Score based on how close the grid point is to a detected beat
-                        if (minDist < refinedInterval * 0.25) {
-                            score += 1 - (minDist / refinedInterval);
-                        }
-                        gridTime += refinedInterval;
-                    }
-
-                    if (score > bestMatchScore) {
-                        bestMatchScore = score;
-                        bestStartOffset = testOffset;
-                    }
-                }
-
-                console.log(`Best start offset: ${bestStartOffset.toFixed(3)}s (score: ${bestMatchScore.toFixed(2)})`);
-
-                // Step 3: Create the beat grid with the refined parameters
-                const finalBeats = [];
-                let gridTime = startTime + bestStartOffset;
-
-                // If first grid beat is before song start, advance it
-                while (gridTime < 0) {
-                    gridTime += refinedInterval;
-                }
-
-                // Step 4: For each grid position, snap to nearest detected beat if close enough
-                while (gridTime < endTime) {
-                    // Find nearest detected beat within tolerance
-                    let nearestBeat = null;
-                    let nearestDist = Infinity;
-
-                    for (const beat of beats) {
-                        const dist = Math.abs(beat.time - gridTime);
-                        if (dist < nearestDist) {
-                            nearestDist = dist;
-                            nearestBeat = beat;
-                        }
-                    }
-
-                    // Snap to detected beat if within 20% of interval, otherwise use grid
-                    if (nearestDist < refinedInterval * 0.2 && nearestBeat) {
-                        finalBeats.push({ time: nearestBeat.time, energy: nearestBeat.energy });
-                    } else {
-                        finalBeats.push({ time: gridTime, energy: 0.5 });
-                    }
-
-                    gridTime += refinedInterval;
-                }
-
-                // Step 5: Verify the plan matches the song
-                let matchedBeats = 0;
-                for (const finalBeat of finalBeats) {
-                    for (const detectedBeat of beats) {
-                        if (Math.abs(finalBeat.time - detectedBeat.time) < refinedInterval * 0.15) {
-                            matchedBeats++;
-                            break;
-                        }
-                    }
-                }
-
-                const matchRate = (matchedBeats / finalBeats.length * 100).toFixed(1);
-                console.log(`Plan has ${finalBeats.length} beats, ${matchedBeats} matched to detected (${matchRate}%)`);
-                console.log(`=== END ANALYSIS ===\n`);
-
-                return finalBeats;
-            }
-
-            generateBeatsFromBpm(bpm, duration, startTime = 0.5) {
-                const interval = 60 / bpm;
-                const beats = [];
-
-                for (let t = startTime; t < duration - 0.5; t += interval) {
-                    beats.push({ time: t, energy: 0.5 });
-                }
-
-                return beats;
-            }
-
-            findPhraseAlignment(beats, audioBuffer) {
-                // Find the best offset (0-7) so that "1" falls on accented beats
-                // Strategy: use LOW FREQUENCY energy (bass/kick) which typically hits on beat 1
-
-                if (beats.length < 32) {
-                    return 0; // Not enough beats to analyze
-                }
-
-                const channelData = audioBuffer.getChannelData(0);
-                const sampleRate = audioBuffer.sampleRate;
-
-                // Skip first 20 beats (potential intro)
-                const startBeat = 20;
-                const analysisBeats = beats.slice(startBeat);
-
-                // Simple low-pass filter to extract bass frequencies (~60-150Hz)
-                // We'll measure energy after applying a moving average (crude low-pass)
-                const windowMs = 100; // 100ms window
-                const windowSamples = Math.floor(sampleRate * windowMs / 1000);
-
-                // For low-frequency detection, we look at the smoothed signal
-                // A simple approach: measure how much the signal swings (peak-to-peak) in bass range
-                const beatBassEnergy = [];
-
-                for (let idx = 0; idx < analysisBeats.length; idx++) {
-                    const beat = analysisBeats[idx];
-                    const centerSample = Math.floor(beat.time * sampleRate);
-                    const start = Math.max(0, centerSample - windowSamples / 2);
-                    const end = Math.min(channelData.length, centerSample + windowSamples / 2);
-
-                    // Apply simple low-pass by averaging chunks (extracts bass)
-                    const chunkSize = Math.floor(sampleRate / 150); // ~150Hz cutoff
-                    let bassEnergy = 0;
-                    let chunks = 0;
-
-                    for (let i = start; i < end - chunkSize; i += chunkSize) {
-                        let chunkSum = 0;
-                        for (let j = 0; j < chunkSize; j++) {
-                            chunkSum += channelData[i + j];
-                        }
-                        const chunkAvg = chunkSum / chunkSize;
-                        bassEnergy += chunkAvg * chunkAvg;
-                        chunks++;
-                    }
-
-                    bassEnergy = chunks > 0 ? Math.sqrt(bassEnergy / chunks) : 0;
-                    beatBassEnergy.push({ index: startBeat + idx, bass: bassEnergy });
-                }
-
-                // Find average bass energy
-                const avgBass = beatBassEnergy.reduce((sum, b) => sum + b.bass, 0) / beatBassEnergy.length;
-
-                // Find beats with above-average bass (bass drum hits)
-                const bassHits = beatBassEnergy.filter(b => b.bass > avgBass * 1.1);
-
-                // Count which position bass hits fall on
-                const positionCounts = [0, 0, 0, 0, 0, 0, 0, 0];
-                for (const hit of bassHits) {
-                    const position = hit.index % 8;
-                    positionCounts[position]++;
-                }
-
-                // Find which position has the most bass hits - this should be beat 1
-                let maxCount = 0;
-                let bassPosition = 0;
-                for (let i = 0; i < 8; i++) {
-                    if (positionCounts[i] > maxCount) {
-                        maxCount = positionCounts[i];
-                        bassPosition = i;
-                    }
-                }
-
-                // The offset needed to make bassPosition become position 0 (beat 1)
-                const bestOffset = (8 - bassPosition) % 8;
-
-                console.log(`Bass hit position counts:`, positionCounts.map((c, i) => `${i}:${c}`).join(', '));
-                console.log(`Most bass at position ${bassPosition}, using offset ${bestOffset}`);
-
-                return bestOffset;
-            }
-
-            updatePlayerUI() {
-                const song = this.currentSong;
-                if (!song) return;
-
-                if (song.processed) {
-                    this.playBtn.disabled = false;
-                    this.playBtn.textContent = 'Play with Counting';
-                    this.bpmValue.textContent = song.bpm;
-                    this.beatsValue.textContent = song.beats.length;
-                    this.phrasesValue.textContent = Math.floor(song.beats.length / 8);
-                    this.totalTimeEl.textContent = this.formatTime(song.audioBuffer.duration);
-                } else {
-                    this.playBtn.disabled = true;
-                    this.playBtn.textContent = 'Processing...';
-                    this.bpmValue.textContent = '--';
-                    this.beatsValue.textContent = '--';
-                    this.phrasesValue.textContent = '--';
-                }
-
-                this.currentCountEl.textContent = '-';
-                this.progressFill.style.width = '0%';
-                this.currentTimeEl.textContent = '0:00';
-            }
-
-            togglePlay() {
-                if (this.isPlaying) {
-                    this.pause();
-                } else {
-                    this.play();
-                }
-            }
-
-            async play() {
-                if (!this.currentSong || !this.currentSong.processed) return;
-
-                // Resume audio context if suspended
-                if (this.audioContext.state === 'suspended') {
-                    await this.audioContext.resume();
-                }
-
-                // Create source and gain nodes
-                this.sourceNode = this.audioContext.createBufferSource();
-                this.sourceNode.buffer = this.currentSong.audioBuffer;
-
-                this.gainNode = this.audioContext.createGain();
-                this.gainNode.gain.value = this.musicVolume;
-
-                this.sourceNode.connect(this.gainNode);
-                this.gainNode.connect(this.audioContext.destination);
-
-                // Calculate start position
-                const offset = this.pauseTime;
-                this.startTime = this.audioContext.currentTime - offset;
-
-                this.sourceNode.start(0, offset);
-                this.isPlaying = true;
-
-                this.playBtn.textContent = 'Pause';
-                this.playBtn.classList.add('playing');
-
-                // Schedule all the counts
-                this.scheduleAllCounts(offset);
-
-                // Start animation loop
-                this.updatePlayback();
-
-                // Handle song end
-                this.sourceNode.onended = () => {
-                    if (this.isPlaying) {
-                        this.stop();
-                    }
-                };
-            }
-
-            pause() {
-                if (!this.isPlaying) return;
-
-                this.pauseTime = this.audioContext.currentTime - this.startTime;
-                this.sourceNode.stop();
-                this.isPlaying = false;
-
-                // Cancel scheduled speech
-                this.synth.cancel();
-                this.clearScheduledCounts();
-
-                this.playBtn.textContent = 'Resume';
-                this.playBtn.classList.remove('playing');
-
-                if (this.animationFrame) {
-                    cancelAnimationFrame(this.animationFrame);
-                }
-            }
-
-            stop() {
-                if (this.sourceNode) {
-                    try {
-                        this.sourceNode.stop();
-                    } catch (e) {}
-                }
-
-                this.isPlaying = false;
-                this.pauseTime = 0;
-
-                this.synth.cancel();
-                this.clearScheduledCounts();
-
-                this.playBtn.textContent = 'Play with Counting';
-                this.playBtn.classList.remove('playing');
-
-                this.progressFill.style.width = '0%';
-                this.currentTimeEl.textContent = '0:00';
-                this.currentCountEl.textContent = '-';
-                this.beatIndicator.classList.remove('pulse', 'accent');
-                this.clearDots();
-
-                if (this.animationFrame) {
-                    cancelAnimationFrame(this.animationFrame);
-                }
-            }
-
-            seek(time) {
-                const wasPlaying = this.isPlaying;
-
-                if (this.isPlaying) {
-                    this.sourceNode.stop();
-                    this.synth.cancel();
-                    this.clearScheduledCounts();
-                }
-
-                this.pauseTime = Math.max(0, Math.min(time, this.currentSong.audioBuffer.duration));
-                this.isPlaying = false;
-
-                if (wasPlaying) {
-                    this.play();
-                } else {
-                    this.progressFill.style.width = (this.pauseTime / this.currentSong.audioBuffer.duration * 100) + '%';
-                    this.currentTimeEl.textContent = this.formatTime(this.pauseTime);
-                }
-            }
-
-            scheduleAllCounts(startOffset) {
-                this.clearScheduledCounts();
-
-                const beats = this.currentSong.beats;
-                const phraseOffset = this.currentSong.phraseOffset || 0;
-                const audioContextTime = this.audioContext.currentTime;
-
-                for (let i = 0; i < beats.length; i++) {
-                    const beat = beats[i];
-                    const beatTime = beat.time - startOffset;
-
-                    if (beatTime < 0) continue; // Skip past beats
-
-                    // Apply phrase offset so "1" falls on accented beats
-                    const count = ((i + phraseOffset) % 8) + 1; // 1-8
-                    const triggerTime = audioContextTime + beatTime;
-
-                    // Schedule the count
-                    const timeout = setTimeout(() => {
-                        this.triggerCount(count);
-                    }, beatTime * 1000);
-
-                    this.scheduledCounts.push(timeout);
-                }
-            }
-
-            clearScheduledCounts() {
-                for (const timeout of this.scheduledCounts) {
-                    clearTimeout(timeout);
-                }
-                this.scheduledCounts = [];
-            }
-
-            triggerCount(count) {
-                this.currentCount = count;
-
-                // Update visual
-                this.currentCountEl.textContent = count;
-                this.beatIndicator.classList.remove('accent');
-                if (count === 1) {
-                    this.beatIndicator.classList.add('accent');
-                }
-
-                this.beatIndicator.classList.add('pulse');
-                setTimeout(() => this.beatIndicator.classList.remove('pulse'), 80);
-
-                this.updateDots(count - 1);
-
-                // Speak the count
-                this.speakCount(count);
-            }
-
-            speakCount(count) {
-                if (this.synth.speaking) {
-                    this.synth.cancel();
-                }
-
-                const utterance = new SpeechSynthesisUtterance(count.toString());
-
-                if (this.selectedVoice) {
-                    utterance.voice = this.selectedVoice;
-                }
-
-                utterance.rate = 1.5;
-                utterance.volume = this.voiceVolume;
-                utterance.pitch = count === 1 ? 1.1 : 0.95;
-
-                this.synth.speak(utterance);
-            }
-
-            updatePlayback() {
-                if (!this.isPlaying) return;
-
-                const currentTime = this.audioContext.currentTime - this.startTime;
-                const duration = this.currentSong.audioBuffer.duration;
-
-                const percent = (currentTime / duration) * 100;
-                this.progressFill.style.width = percent + '%';
-                this.currentTimeEl.textContent = this.formatTime(currentTime);
-
-                this.animationFrame = requestAnimationFrame(() => this.updatePlayback());
-            }
-
-            updateDots(index) {
-                this.beatDots.forEach((dot, i) => {
-                    dot.classList.remove('current');
-                    if (i === index) {
-                        dot.classList.add('current');
-                    }
-                });
-            }
-
-            clearDots() {
-                this.beatDots.forEach(dot => dot.classList.remove('current'));
-            }
-
-            formatTime(seconds) {
-                const mins = Math.floor(seconds / 60);
-                const secs = Math.floor(seconds % 60);
-                return `${mins}:${secs.toString().padStart(2, '0')}`;
-            }
-
-            selectBestVoice() {
-                const voices = this.synth.getVoices();
-                if (voices.length === 0) return;
-
-                const preferred = ['Samantha', 'Karen', 'Moira', 'Tessa', 'Fiona', 'Daniel', 'Google'];
-
-                for (const name of preferred) {
-                    const voice = voices.find(v => v.name.includes(name));
-                    if (voice) {
-                        this.selectedVoice = voice;
-                        return;
-                    }
-                }
-
-                const englishVoice = voices.find(v => v.lang.startsWith('en'));
-                if (englishVoice) {
-                    this.selectedVoice = englishVoice;
-                }
-            }
-
-            showProcessing(text, detail) {
-                this.processingText.textContent = text;
-                this.processingDetail.textContent = detail;
-                this.processingOverlay.classList.add('active');
-            }
-
-            hideProcessing() {
-                this.processingOverlay.classList.remove('active');
-            }
-        }
-
-        window.addEventListener('load', () => {
-            new BeatCounterApp();
-        });
-    </script>
+    <script src="js/app.js"></script>
+    <script src="js/fft.js"></script>
+    <script src="js/analysis.js"></script>
+    <script src="js/analysis-harmony.js"></script>
+    <script src="js/analysis-rhythm.js"></script>
+    <script src="js/analysis-combined.js"></script>
+    <script src="js/visualization.js"></script>
+    <script src="js/init.js"></script>
 </body>
 </html>
