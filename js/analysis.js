@@ -393,19 +393,27 @@ BeatCounterApp.prototype.findBandPhraseAlignment = function(beats, envelope) {
         return { index: startBeat + idx, energy: maxEnergy };
     });
 
-    const avgEnergy = beatEnergies.reduce((s, b) => s + b.energy, 0) / beatEnergies.length;
-    const strongBeats = beatEnergies.filter(b => b.energy > avgEnergy * 1.1);
-
-    const positionCounts = [0, 0, 0, 0, 0, 0, 0, 0];
-    for (const hit of strongBeats) {
-        positionCounts[hit.index % 8]++;
+    // Energy-weighted scoring: sum actual energies at each position (0-7)
+    // instead of just counting beats above a threshold. This captures accent
+    // magnitude so strong downbeats dominate even in bands with uniform energy.
+    const positionEnergy = new Float64Array(8);
+    const positionCounts = new Float64Array(8);
+    for (const be of beatEnergies) {
+        const pos = be.index % 8;
+        positionEnergy[pos] += be.energy;
+        positionCounts[pos]++;
     }
 
-    let maxCount = 0;
+    // Average energy per position
+    for (let i = 0; i < 8; i++) {
+        if (positionCounts[i] > 0) positionEnergy[i] /= positionCounts[i];
+    }
+
+    let maxEnergy = 0;
     let bestPos = 0;
     for (let i = 0; i < 8; i++) {
-        if (positionCounts[i] > maxCount) {
-            maxCount = positionCounts[i];
+        if (positionEnergy[i] > maxEnergy) {
+            maxEnergy = positionEnergy[i];
             bestPos = i;
         }
     }
