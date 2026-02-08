@@ -24,15 +24,19 @@ BeatCounterApp.prototype.computeRhythmPattern = function(bands, beats) {
 
             // Onset = peak positive derivative in window around beat
             let onset = 0;
+            let peakEnergy = 0;
             const windowHalf = 3;
             for (let w = -windowHalf; w <= windowHalf; w++) {
                 const f = Math.max(1, Math.min(frame + w, env.length - 1));
                 const diff = env[f] - env[f - 1];
                 if (diff > onset) onset = diff;
+                if (env[f] > peakEnergy) peakEnergy = env[f];
             }
 
+            // Weight onset by absolute energy so positions with both strong
+            // attacks AND high energy are favored (e.g. bass beat 1 in swing)
             const pos = i % 8;
-            pattern[pos] += onset;
+            pattern[pos] += onset * peakEnergy;
             counts[pos]++;
         }
 

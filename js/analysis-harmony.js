@@ -130,18 +130,21 @@ BeatCounterApp.prototype.findHarmonyPhraseOffset = function(beatDistances, beats
     if (beats.length < 32) return 0;
     const startBeat = Math.min(16, Math.floor(beats.length * 0.1));
 
-    const positionSums = new Array(8).fill(0);
-    const positionCounts = new Array(8).fill(0);
+    const positionScores = new Float64Array(8);
+    const positionCounts = new Float64Array(8);
 
     for (let i = Math.max(1, startBeat); i < beats.length; i++) {
         const pos = i % 8;
-        positionSums[pos] += beatDistances[i];
+        // Square distances to amplify large chord changes (real phrase boundaries)
+        // over small mid-phrase harmonic variations
+        const d = beatDistances[i];
+        positionScores[pos] += d * d;
         positionCounts[pos]++;
     }
 
     let maxAvg = 0, bestPos = 0;
     for (let i = 0; i < 8; i++) {
-        const avg = positionCounts[i] > 0 ? positionSums[i] / positionCounts[i] : 0;
+        const avg = positionCounts[i] > 0 ? positionScores[i] / positionCounts[i] : 0;
         if (avg > maxAvg) { maxAvg = avg; bestPos = i; }
     }
     return (8 - bestPos) % 8;
