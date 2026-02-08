@@ -8,7 +8,12 @@ BeatCounterApp.prototype.processSong = async function(song) {
         if (this.audioContext.state === 'suspended') {
             await this.audioContext.resume();
         }
-        const arrayBuffer = await song.file.arrayBuffer();
+        const arrayBuffer = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(song.file);
+        });
         song.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
         // Analyze each frequency band
