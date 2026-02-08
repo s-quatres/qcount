@@ -298,7 +298,7 @@ BeatCounterApp.prototype.updateMethodButtons = function() {
         if (song && song.processed && song.analysis) {
             let conf = 0;
             switch (method) {
-                case 'energy': conf = song.bands[1].phraseConfidence || 0; break;
+                case 'energy': conf = song.energyConsensusConfidence || 0; break;
                 case 'harmony': conf = song.analysis.harmonyConfidence || 0; break;
                 case 'rhythm': conf = song.analysis.rhythmConfidence || 0; break;
                 case 'combined':

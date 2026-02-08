@@ -5,10 +5,10 @@ BeatCounterApp.prototype.computeCombinedPhraseOffset = function(song) {
     const votes = new Float64Array(8);
     const methods = [];
 
-    // Energy (bass band): confidence-weighted
-    if (song.bands && song.bands[1]) {
-        const offset = song.bands[1].phraseOffset;
-        const confidence = song.bands[1].phraseConfidence || 0;
+    // Energy (consensus across all bands): confidence-weighted
+    if (song.energyConsensusOffset != null) {
+        const offset = song.energyConsensusOffset;
+        const confidence = song.energyConsensusConfidence || 0;
         const pos = (8 - offset) % 8;
         votes[pos] += confidence;
         methods.push({ name: 'Energy', offset, confidence });
@@ -50,7 +50,7 @@ BeatCounterApp.prototype.getPhraseOffsetForMethod = function(song) {
     if (song.manualPhraseOffset != null) return song.manualPhraseOffset;
     if (!song.analysis) return song.bands[1].phraseOffset;
     switch (this.activeMethod) {
-        case 'energy': return song.bands[1].phraseOffset;
+        case 'energy': return song.energyConsensusOffset != null ? song.energyConsensusOffset : song.bands[1].phraseOffset;
         case 'harmony': return song.analysis.harmonyPhraseOffset;
         case 'rhythm': return song.analysis.rhythmPhraseOffset;
         case 'combined': return song.analysis.combinedPhraseOffset;

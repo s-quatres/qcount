@@ -53,6 +53,25 @@ BeatCounterApp.prototype.processSong = async function(song) {
         song.beats = bassBand.beats;
         song.bpm = bassBand.bpm;
 
+        // Compute energy consensus: confidence-weighted vote across all bands
+        const energyVotes = new Float64Array(8);
+        for (const band of song.bands) {
+            const pos = (8 - (band.phraseOffset || 0)) % 8;
+            energyVotes[pos] += band.phraseConfidence || 0;
+        }
+        let maxEV = 0, secondEV = 0, bestEP = 0;
+        for (let i = 0; i < 8; i++) {
+            if (energyVotes[i] > maxEV) {
+                secondEV = maxEV;
+                maxEV = energyVotes[i];
+                bestEP = i;
+            } else if (energyVotes[i] > secondEV) {
+                secondEV = energyVotes[i];
+            }
+        }
+        song.energyConsensusOffset = (8 - bestEP) % 8;
+        song.energyConsensusConfidence = maxEV > 0 ? (maxEV - secondEV) / maxEV : 0;
+
         // === Additional analyses for phrase detection methods ===
         song.analysis = {};
 
@@ -87,10 +106,11 @@ BeatCounterApp.prototype.processSong = async function(song) {
 
         // Log all phrase offsets and confidences for debugging
         console.log('Phrase offsets (confidence):', {
-            energy: song.bands[1].phraseOffset + ' (' + (song.bands[1].phraseConfidence * 100).toFixed(1) + '%)',
+            energyConsensus: song.energyConsensusOffset + ' (' + (song.energyConsensusConfidence * 100).toFixed(1) + '%)',
             harmony: song.analysis.harmonyPhraseOffset + ' (' + (song.analysis.harmonyConfidence * 100).toFixed(1) + '%)',
             rhythm: song.analysis.rhythmPhraseOffset + ' (' + (song.analysis.rhythmConfidence * 100).toFixed(1) + '%)',
             combined: song.analysis.combinedPhraseOffset,
+            perBand: song.bands.map(b => b.name + ': ' + b.phraseOffset + ' (' + ((b.phraseConfidence || 0) * 100).toFixed(0) + '%)'),
         });
 
         // Set initial phrase offset based on active method

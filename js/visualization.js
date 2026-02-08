@@ -240,7 +240,7 @@ BeatCounterApp.prototype.drawBaseLayer = function(ctx, currentTime) {
     }
 };
 
-// === ENERGY OVERLAY: beat markers per band ===
+// === ENERGY OVERLAY: beat markers per band + consensus ===
 BeatCounterApp.prototype.drawEnergyOverlay = function(ctx, currentTime) {
     const w = this.canvasWidth, h = this.canvasHeight;
     const song = this.currentSong;
@@ -249,10 +249,17 @@ BeatCounterApp.prototype.drawEnergyOverlay = function(ctx, currentTime) {
     const windowEnd = currentTime + halfWindow;
     const bandH = h / song.bands.length;
 
+    // Per-band beat markers and confidence labels
     for (let b = 0; b < song.bands.length; b++) {
         const band = song.bands[b];
         const bandY = b * bandH;
         this.drawBeatMarkers(ctx, band.beats, band.phraseOffset || 0, bandY, bandH, band.color, windowStart, windowEnd);
+
+        // Confidence % next to band label
+        const confPct = Math.round((band.phraseConfidence || 0) * 100);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.font = '7px sans-serif';
+        ctx.fillText(confPct + '%', 4 + ctx.measureText(band.name).width + 4, bandY + 10);
 
         // Band separator
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
@@ -262,6 +269,10 @@ BeatCounterApp.prototype.drawEnergyOverlay = function(ctx, currentTime) {
         ctx.lineTo(w, bandY + bandH);
         ctx.stroke();
     }
+
+    // Consensus beat markers (confidence-weighted across all bands)
+    const consensusOffset = song.energyConsensusOffset || 0;
+    this.drawBeatMarkers(ctx, song.beats, consensusOffset, 0, h, 'rgba(255,255,255,0.7)', windowStart, windowEnd);
 };
 
 // === HARMONY OVERLAY: beat-sync chroma distance stems ===
