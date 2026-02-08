@@ -63,10 +63,13 @@ BeatCounterApp.prototype.processSong = async function(song) {
         song.bpm = bassBand.bpm;
 
         // Compute energy consensus: confidence-weighted vote across all bands
+        // Weight lower bands more heavily — bass instruments mark the downbeat
+        const bandWeights = [0.5, 1.0, 0.8, 0.6, 0.4, 0.3, 0.2, 0.1];
         const energyVotes = new Float64Array(8);
-        for (const band of song.bands) {
+        for (let b = 0; b < song.bands.length; b++) {
+            const band = song.bands[b];
             const pos = (8 - (band.phraseOffset || 0)) % 8;
-            energyVotes[pos] += band.phraseConfidence || 0;
+            energyVotes[pos] += (band.phraseConfidence || 0) * (bandWeights[b] || 0.1);
         }
         let maxEV = 0, secondEV = 0, bestEP = 0;
         for (let i = 0; i < 8; i++) {
