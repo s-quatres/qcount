@@ -12,6 +12,10 @@ class BeatCounterApp {
         this.scheduledCounts = [];
         this.currentCount = 0;
 
+        // Canvas dragging state
+        this.isDragging = false;
+        this.dragStarted = false;
+
         // Voice
         this.synth = window.speechSynthesis;
         this.selectedVoice = null;
@@ -102,23 +106,42 @@ BeatCounterApp.prototype.bindEvents = function() {
     this.playBtn.addEventListener('click', () => this.togglePlay());
     this.stopBtn.addEventListener('click', () => this.stop());
 
-    // Canvas click to seek, shift-click to set beat 1
-    this.vizCanvas.addEventListener('click', (e) => {
+    // Canvas drag-to-seek (mousedown, mousemove, mouseup)
+    this.vizCanvas.addEventListener('mousedown', (e) => {
         if (!this.currentSong || !this.currentSong.processed) return;
-        const rect = this.vizCanvas.getBoundingClientRect();
-        const xRatio = (e.clientX - rect.left) / rect.width;
-        const currentTime = this.isPlaying
-            ? this.audioContext.currentTime - this.startTime
-            : this.pauseTime;
-        const windowStart = currentTime - this.WINDOW_SECONDS / 2;
-        const clickTime = windowStart + xRatio * this.WINDOW_SECONDS;
+        this.isDragging = true;
+        this.dragStarted = false;
+        this.handleCanvasDrag(e);
+    });
 
-        if (e.shiftKey) {
-            // Shift-click: set nearest beat as "1"
+    this.vizCanvas.addEventListener('mousemove', (e) => {
+        if (!this.isDragging) return;
+        this.dragStarted = true;
+        this.handleCanvasDrag(e);
+    });
+
+    this.vizCanvas.addEventListener('mouseup', (e) => {
+        if (!this.isDragging) return;
+
+        // If we didn't actually drag (just a click), handle shift-click for manual beat setting
+        if (!this.dragStarted && e.shiftKey) {
+            const rect = this.vizCanvas.getBoundingClientRect();
+            const xRatio = (e.clientX - rect.left) / rect.width;
+            const currentTime = this.isPlaying
+                ? this.audioContext.currentTime - this.startTime
+                : this.pauseTime;
+            const windowStart = currentTime - this.WINDOW_SECONDS / 2;
+            const clickTime = windowStart + xRatio * this.WINDOW_SECONDS;
             this.setManualBeatOne(clickTime);
-        } else {
-            this.seek(Math.max(0, Math.min(clickTime, this.currentSong.audioBuffer.duration)));
         }
+
+        this.isDragging = false;
+        this.dragStarted = false;
+    });
+
+    this.vizCanvas.addEventListener('mouseleave', () => {
+        this.isDragging = false;
+        this.dragStarted = false;
     });
 
     // Volume sliders
@@ -315,6 +338,19 @@ BeatCounterApp.prototype.clearManualOverride = function() {
     } else {
         this.drawVisualization(this.pauseTime);
     }
+};
+
+BeatCounterApp.prototype.handleCanvasDrag = function(e) {
+    const rect = this.vizCanvas.getBoundingClientRect();
+    const xRatio = (e.clientX - rect.left) / rect.width;
+    const currentTime = this.isPlaying
+        ? this.audioContext.currentTime - this.startTime
+        : this.pauseTime;
+    const windowStart = currentTime - this.WINDOW_SECONDS / 2;
+    const seekTime = windowStart + xRatio * this.WINDOW_SECONDS;
+    const clampedTime = Math.max(0, Math.min(seekTime, this.currentSong.audioBuffer.duration));
+
+    this.seek(clampedTime);
 };
 
 // === PLAYBACK METHODS ===
@@ -542,7 +578,8 @@ BeatCounterApp.prototype.clearDots = function() {
 BeatCounterApp.prototype.formatTime = function(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const tenths = Math.floor((seconds % 1) * 10);
+    return `${mins}:${secs.toString().padStart(2, '0')}.${tenths}`;
 };
 
 BeatCounterApp.prototype.selectBestVoice = function() {

@@ -82,7 +82,8 @@ MP3 File → Web Audio API (decodeAudioData)
 - Phrase-start markers (beat 1): thicker, brighter lines with "1" label
 - Playhead: dashed white vertical line at center
 - Time labels every 5 seconds
-- Click to seek
+- Click or drag to seek (smooth scrubbing)
+- Shift-click on any beat to manually set it as "1"
 
 ### Beat Detection (Per-Band)
 1. Audio filtered to band via BiquadFilter (bandpass, Q = center/bandwidth)
@@ -128,15 +129,17 @@ The app validates and corrects beat distribution:
 ### Player Controls
 - Play/Pause button
 - Stop button (resets to beginning)
-- Click canvas to seek
+- Click or drag canvas to seek (smooth scrubbing)
+- Shift-click a beat to manually set it as "1"
 - Voice volume slider
 - Music volume slider
 
 ### Display
 - Large beat indicator (1-8) with phrase dots
-- Compact info: BPM, beats, phrases, time
+- Compact info: BPM, beats, phrases, time (with tenths of seconds precision)
 - 8-channel scrolling visualization canvas
 - Per-band beat and phrase markers
+- Grab/grabbing cursor for visual drag feedback
 
 ## Processing States
 1. **Click to process** - File loaded, not yet analyzed
@@ -172,7 +175,7 @@ The app validates and corrects beat distribution:
 
 ## Common Issues
 1. **Wrong BPM detected**: Try songs with clearer beats; very complex rhythms may confuse detection
-2. **Counts not aligned**: The first detected beat becomes beat 1; seek to adjust
+2. **Counts not aligned**: Use shift-click on the visualization to manually set any beat as "1"
 3. **No voice output**: Check browser permissions and voice volume slider
 4. **File won't load**: Ensure it's a valid audio format (MP3, WAV, etc.)
 
@@ -181,10 +184,17 @@ The app validates and corrects beat distribution:
 - **Repository**: https://github.com/s-quatres/qcount
 
 ### After Making Changes
-Always push changes to deploy to GitHub Pages:
+**IMPORTANT**: When code changes are made, automatically commit and push them, then monitor the deployment:
+
+1. **Commit and push**: Stage all changed files (index.html, js/, CLAUDE.md), commit with a descriptive message, and push to master
+2. **Track deployment**: Use `gh run watch` to monitor the GitHub Pages build workflow in real-time
+3. **Confirm completion**: Once the workflow completes successfully, inform the user that changes are live at https://s-quatres.github.io/qcount/
+
 ```bash
 git add index.html js/ CLAUDE.md
 git commit -m "Description of changes"
 git push origin master
+gh run watch
 ```
-Changes are automatically deployed via GitHub Pages after pushing to master.
+
+Changes are automatically deployed via GitHub Pages after pushing to master. The `gh run watch` command will show the build progress and notify when deployment is complete.

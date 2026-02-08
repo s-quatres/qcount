@@ -399,7 +399,11 @@
         .viz-canvas {
             width: 100%;
             display: block;
-            cursor: crosshair;
+            cursor: grab;
+        }
+
+        .viz-canvas:active {
+            cursor: grabbing;
         }
 
         .band-labels {
@@ -589,7 +593,7 @@
         </div>
 
         <p class="instructions">
-            Select MP3 files to analyze. Click graph to seek. Shift-click a beat to set it as "1".
+            Select MP3 files to analyze. Click or drag graph to seek. Shift-click a beat to set it as "1".
         </p>
     </div>
 
