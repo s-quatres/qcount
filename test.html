@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Beat Detection Test</title>
+<style>
+body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 20px; }
+h1 { color: #ffd93d; }
+h2 { color: #4d96ff; margin-top: 1.5em; }
+table { border-collapse: collapse; margin: 10px 0; width: 100%; }
+th { background: #333; padding: 6px 12px; text-align: left; }
+td { padding: 5px 12px; border-bottom: 1px solid #333; }
+.pass { background: #1a3a1a; color: #6bcb77; }
+.fail { background: #3a1a1a; color: #ff6b6b; }
+.skip { background: #2a2a1a; color: #888; }
+#dropzone {
+    border: 2px dashed #4d96ff;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 20px;
+    color: #4d96ff;
+}
+#dropzone:hover { background: #0a1a3a; }
+#status { color: #ffd93d; margin: 10px 0; }
+button {
+    background: #4d96ff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+}
+button:hover { background: #2a76df; }
+.summary { font-size: 1.1em; padding: 10px; border-radius: 4px; margin-top: 20px; }
+.summary.all-pass { background: #1a3a1a; color: #6bcb77; }
+.summary.has-fail { background: #3a1a1a; color: #ff6b6b; }
+
+/* Hidden mock UI elements */
+#mock-ui { display: none; }
+</style>
+</head>
+<body>
+
+<h1>Beat Detection Test</h1>
+<p>Load the 3 test MP3s to verify each detection method finds the correct phrase "1" beat.</p>
+
+<div id="dropzone" onclick="document.getElementById('fileInput').click()">
+    Click to load MP3 files (or drag &amp; drop)<br>
+    <small>swinginsafari.mp3 &nbsp;|&nbsp; doright.mp3 &nbsp;|&nbsp; VIC017467.mp3</small>
+</div>
+<input type="file" id="fileInput" multiple accept=".mp3,.wav" style="display:none">
+
+<div id="status"></div>
+<div id="results"></div>
+
+<!-- Mock DOM elements required by BeatCounterApp constructor -->
+<div id="mock-ui">
+    <button id="fileBtn"></button>
+    <div id="songList"></div>
+    <div id="playerPanel"></div>
+    <button id="playBtn"></button>
+    <button id="stopBtn"></button>
+    <div id="currentTime"></div>
+    <div id="totalTime"></div>
+    <div id="beatIndicator"></div>
+    <div id="currentCount"></div>
+    <div id="bpmValue"></div>
+    <div id="beatsValue"></div>
+    <div id="phrasesValue"></div>
+    <input type="range" id="voiceVolSlider">
+    <div id="voiceVolValue"></div>
+    <input type="range" id="musicVolSlider">
+    <div id="musicVolValue"></div>
+    <div id="processingOverlay"></div>
+    <div id="processingText"></div>
+    <div id="processingDetail"></div>
+    <canvas id="vizCanvas" width="100" height="100"></canvas>
+    <div id="bandLabels"></div>
+    <div class="beat-dot"></div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/fft.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/analysis-harmony.js"></script>
+<script src="js/analysis-rhythm.js"></script>
+<script src="js/analysis-combined.js"></script>
+<script src="js/visualization.js"></script>
+
+<script>
+// ── Expected "1" beat timestamps from beat_test.yaml ──────────────────────────
+const EXPECTED = {
+    'swinginsafari.mp3': 59.1,
+    'doright.mp3':       19.0,
+    'VIC017467.mp3':     49.0,
+};
+
+// Within half a beat interval at 120 BPM (~0.25s). Use 0.5s to be generous.
+const TOLERANCE_SEC = 0.5;
+
+const METHODS = ['energy', 'harmony', 'rhythm', 'combined'];
+
+// ── Helper: find nearest "1" beat time for a given phraseOffset ───────────────
+function nearestOneBeat(beats, phraseOffset, targetTime) {
+    let nearest = null, minDiff = Infinity;
+    for (let i = 0; i < beats.length; i++) {
+        const count = ((i + phraseOffset) % 8) + 1;
+        if (count !== 1) continue;
+        const diff = Math.abs(beats[i].time - targetTime);
+        if (diff < minDiff) { minDiff = diff; nearest = beats[i].time; }
+    }
+    return { time: nearest, diff: minDiff };
+}
+
+// ── Main test runner ──────────────────────────────────────────────────────────
+async function runTests(files) {
+    const resultsEl = document.getElementById('results');
+    const statusEl  = document.getElementById('status');
+    resultsEl.innerHTML = '';
+
+    // Create a BeatCounterApp with silenced UI methods
+    const app = new BeatCounterApp();
+    app.showProcessing = () => {};
+    app.hideProcessing = () => {};
+    app.renderSongList = () => {};
+    app.setupCanvas    = () => {};
+
+    let totalPass = 0, totalFail = 0, totalSkip = 0;
+
+    for (const file of files) {
+        const expectedTime = EXPECTED[file.name];
+        if (expectedTime == null) {
+            resultsEl.innerHTML += `<p class="skip">⚠ Unknown file: ${file.name} (not in EXPECTED table)</p>`;
+            continue;
+        }
+
+        statusEl.textContent = `Processing ${file.name}…`;
+        await new Promise(r => setTimeout(r, 10)); // let status render
+
+        const song = { name: file.name, file };
+        try {
+            await app.processSong(song);
+        } catch (e) {
+            resultsEl.innerHTML += `<h2>${file.name}</h2><p class="fail">ERROR: ${e.message}</p>`;
+            totalFail++;
+            continue;
+        }
+
+        const beats  = song.beats;
+        const bpm    = song.bpm?.toFixed(1) ?? '?';
+
+        let html = `<h2>${file.name} &nbsp;<small style="color:#888">BPM: ${bpm} &nbsp; Beats: ${beats.length}</small></h2>`;
+        html += `<table>
+            <tr>
+                <th>Method</th>
+                <th>phraseOffset</th>
+                <th>Nearest "1" beat (s)</th>
+                <th>Expected (s)</th>
+                <th>Error (s)</th>
+                <th>Result</th>
+            </tr>`;
+
+        for (const method of METHODS) {
+            app.activeMethod = method;
+            const offset = app.getPhraseOffsetForMethod(song);
+
+            if (offset == null) {
+                html += `<tr class="skip"><td>${method}</td><td colspan="5">N/A (method not available)</td></tr>`;
+                totalSkip++;
+                continue;
+            }
+
+            const { time: nearestTime, diff } = nearestOneBeat(beats, offset, expectedTime);
+            const pass = diff <= TOLERANCE_SEC;
+
+            if (pass) totalPass++; else totalFail++;
+
+            html += `<tr class="${pass ? 'pass' : 'fail'}">
+                <td>${method}</td>
+                <td>${offset}</td>
+                <td>${nearestTime != null ? nearestTime.toFixed(3) : 'N/A'}</td>
+                <td>${expectedTime.toFixed(3)}</td>
+                <td>${diff < Infinity ? diff.toFixed(3) : 'N/A'}</td>
+                <td>${pass ? '✓ PASS' : '✗ FAIL'}</td>
+            </tr>`;
+        }
+
+        html += '</table>';
+        resultsEl.innerHTML += html;
+    }
+
+    statusEl.textContent = '';
+
+    const summaryClass = totalFail === 0 ? 'all-pass' : 'has-fail';
+    resultsEl.innerHTML += `<div class="summary ${summaryClass}">
+        Summary: ${totalPass} passed &nbsp;|&nbsp; ${totalFail} failed &nbsp;|&nbsp; ${totalSkip} skipped
+        (tolerance ±${TOLERANCE_SEC}s)
+    </div>`;
+}
+
+// ── File input wiring ─────────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+    runTests([...e.target.files]);
+});
+
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.background = '#0a1a3a'; });
+dz.addEventListener('dragleave', () => { dz.style.background = ''; });
+dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.style.background = '';
+    runTests([...e.dataTransfer.files]);
+});
+</script>
+</body>
+</html>
