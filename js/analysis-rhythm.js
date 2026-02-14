@@ -71,10 +71,16 @@ BeatCounterApp.prototype.computeRhythmPattern = function(bands, beats) {
     }
 
     const confidence = maxVal > 0 ? (maxVal - secondMax) / maxVal : 0;
+
+    // In swing music the backbeat (beat "2") carries the strongest rhythmic accent,
+    // so the onset peak lands one position AFTER the musical "1".
+    // Shift back by one to find the true phrase start.
+    const phraseStartPos = (bestPos - 1 + 8) % 8;
+
     return {
         bandPatterns,
         combinedPattern,
-        phraseOffset: (8 - bestPos) % 8,
+        phraseOffset: (8 - phraseStartPos) % 8,
         confidence
     };
 };
