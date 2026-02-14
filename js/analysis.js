@@ -128,6 +128,15 @@ BeatCounterApp.prototype.processSong = async function(song) {
         // Set initial phrase offset based on active method
         song.phraseOffset = this.getPhraseOffsetForMethod(song);
 
+        // Debug: log Bass band beats 14-24s with counts
+        const dbgBeats = song.beats.filter(b => b.time >= 14 && b.time <= 24);
+        console.log('Bass beats 14-24s (phraseOffset=' + song.phraseOffset + '):',
+            dbgBeats.map(b => {
+                const idx = song.beats.indexOf(b);
+                return 't=' + b.time.toFixed(3) + ' idx=' + idx + ' count=' + (((idx + song.phraseOffset) % 8) + 1);
+            })
+        );
+
         song.processed = true;
         this.hideProcessing();
         this.renderSongList();
