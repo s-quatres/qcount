@@ -46,7 +46,7 @@ BeatCounterApp.prototype.processSong = async function(song) {
             // Find phrase alignment
             const phraseResult = this.findBandPhraseAlignment(validatedBeats, envelope);
 
-            song.bands.push({
+            const bandData = {
                 name: bandDef.name,
                 color: bandDef.color,
                 envelope: envelope,
@@ -54,7 +54,10 @@ BeatCounterApp.prototype.processSong = async function(song) {
                 bpm: bpm,
                 phraseOffset: phraseResult.offset,
                 phraseConfidence: phraseResult.confidence,
-            });
+            };
+            // Store raw detected beats for bass band (for re-anchoring)
+            if (b === 1) bandData.rawBeats = beats;
+            song.bands.push(bandData);
         }
 
         // Derive global beats from bass band (index 1) for voice counting
@@ -130,6 +133,44 @@ BeatCounterApp.prototype.processSong = async function(song) {
         await new Promise(r => setTimeout(r, 10));
         song.analysis.combinedData = this.computeCombinedPhraseOffset(song);
         song.analysis.combinedPhraseOffset = song.analysis.combinedData.phraseOffset;
+
+        // Re-anchor global beats after bass dropouts (only after stable sections)
+        // This runs AFTER all phase analysis so offset calculations use the stable original grid
+        const bassBandRaw = song.bands[1].rawBeats;
+        if (bassBandRaw && bassBandRaw.length > 0) {
+            const interval = 60 / song.bpm;
+            const reanchorTolerance = interval * 0.4;
+            let consecutiveMatches = 0;
+            let consecutiveMisses = 0;
+            let hadStableSection = false;
+            for (let i = 0; i < song.beats.length; i++) {
+                let bestMatch = null, bestDist = Infinity;
+                for (const db of bassBandRaw) {
+                    const d = Math.abs(db.time - song.beats[i].time);
+                    if (d < bestDist) { bestDist = d; bestMatch = db; }
+                }
+                if (bestDist < reanchorTolerance) {
+                    if (consecutiveMisses >= 8 && hadStableSection) {
+                        const shift = bestMatch.time - song.beats[i].time;
+                        if (Math.abs(shift) > 0.02) {
+                            console.log('Re-anchor at ' + bestMatch.time.toFixed(3) + 's (shift ' +
+                                (shift > 0 ? '+' : '') + shift.toFixed(3) + 's after ' +
+                                consecutiveMisses + ' missed grid beats)');
+                            for (let j = i; j < song.beats.length; j++) {
+                                song.beats[j].time += shift;
+                            }
+                            song.beats[i].energy = bestMatch.energy;
+                        }
+                    }
+                    consecutiveMatches++;
+                    consecutiveMisses = 0;
+                    if (consecutiveMatches >= 8) hadStableSection = true;
+                } else {
+                    consecutiveMisses++;
+                    if (consecutiveMisses >= 3) consecutiveMatches = 0;
+                }
+            }
+        }
 
         // Log all phrase offsets and confidences for debugging
         console.log('Phrase offsets (confidence):', {
