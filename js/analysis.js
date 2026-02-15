@@ -310,7 +310,7 @@ BeatCounterApp.prototype.validate8Counts = function(beats, bpm, duration) {
         refinedInterval = expectedInterval / 2;
         console.log(`Detected double-time, adjusting interval from ${expectedInterval.toFixed(3)}s to ${refinedInterval.toFixed(3)}s`);
     } else if (normalIntervals.length > 10) {
-        // Use median of normal intervals
+        // Use median of normal intervals for robustness against outliers
         normalIntervals.sort((a, b) => a - b);
         refinedInterval = normalIntervals[Math.floor(normalIntervals.length / 2)];
     }

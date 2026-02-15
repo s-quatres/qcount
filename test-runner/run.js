@@ -51,7 +51,7 @@ for (const f of ['fft.js','analysis.js','analysis-harmony.js','analysis-rhythm.j
 // ── Test data (index is array of expected beat-1 timestamps) ─────────────────
 const EXPECTED = {
     'swinginsafari.mp3': [59.1],
-    'doright.mp3':       [19.0, 42.3],
+    'doright.mp3':       [19.0, 34.5, 42.3],
     'VIC017467.mp3':     [49.0],
 };
 const METHODS    = ['energy', 'harmony', 'rhythm', 'combined'];
