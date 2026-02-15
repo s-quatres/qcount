@@ -126,21 +126,32 @@ async function main() {
         song.beats = song.bands[1].beats;
         song.bpm   = song.bands[1].bpm;
 
-        // Energy consensus: re-evaluate each band's envelope against bass beat grid
+        // Energy consensus: aggregate raw onset strengths across all bands
         const bandWeights = [0.5, 1.0, 0.8, 0.6, 0.4, 0.3, 0.2, 0.1];
-        const energyVotes = new Float64Array(8);
+        const aggregatedOnset = new Float64Array(8);
         for (let b = 0; b < song.bands.length; b++) {
             const result = app.findBandPhraseAlignment(song.beats, song.bands[b].envelope);
-            const pos = (8 - (result.offset || 0)) % 8;
-            energyVotes[pos] += (result.confidence || 0) * (bandWeights[b] || 0.1);
+            if (result.positionEnergy) {
+                let bandMax = 0;
+                for (let i = 0; i < 8; i++) {
+                    if (result.positionEnergy[i] > bandMax) bandMax = result.positionEnergy[i];
+                }
+                if (bandMax > 0) {
+                    for (let i = 0; i < 8; i++) {
+                        aggregatedOnset[i] += (result.positionEnergy[i] / bandMax) * (bandWeights[b] || 0.1);
+                    }
+                }
+            }
         }
-        let maxEV = 0, secondEV = 0, bestEP = 0;
+        let maxAO = 0, secondAO = 0, bestAP = 0;
         for (let i = 0; i < 8; i++) {
-            if (energyVotes[i] > maxEV) { secondEV = maxEV; maxEV = energyVotes[i]; bestEP = i; }
-            else if (energyVotes[i] > secondEV) secondEV = energyVotes[i];
+            if (aggregatedOnset[i] > maxAO) { secondAO = maxAO; maxAO = aggregatedOnset[i]; bestAP = i; }
+            else if (aggregatedOnset[i] > secondAO) secondAO = aggregatedOnset[i];
         }
+        // Backbeat correction: in swing, the strongest onset is typically on beat 2
+        const bestEP = (bestAP - 1 + 8) % 8;
         song.energyConsensusOffset     = (8 - bestEP) % 8;
-        song.energyConsensusConfidence = maxEV > 0 ? (maxEV - secondEV) / maxEV : 0;
+        song.energyConsensusConfidence = maxAO > 0 ? (maxAO - secondAO) / maxAO : 0;
 
         // Harmony
         song.analysis = {};
@@ -171,6 +182,11 @@ async function main() {
         console.log(D('  Per-band: ' + song.bands.map((b,i) =>
             `${b.name}[${b.phraseOffset}/${(b.phraseConfidence*100).toFixed(0)}%]`
         ).join('  ')));
+        // Show aggregated onset pattern
+        const aoMax = Math.max(...aggregatedOnset);
+        const aoBar = Array.from(aggregatedOnset).map((v,i) =>
+            `[${i}]${(v/aoMax*10).toFixed(0).padStart(2)}`).join(' ');
+        console.log(D(`  Energy onset pattern: ${aoBar}  peak=${bestAP} corr=-1`));
         console.log(D(`  Energy consensus: offset=${song.energyConsensusOffset} conf=${(song.energyConsensusConfidence*100).toFixed(0)}%`));
         console.log(D(`  Harmony:  offset=${song.analysis.harmonyPhraseOffset} conf=${(song.analysis.harmonyConfidence*100).toFixed(0)}%`));
         console.log(D(`  Rhythm:   offset=${song.analysis.rhythmPhraseOffset} conf=${(song.analysis.rhythmConfidence*100).toFixed(0)}%`));

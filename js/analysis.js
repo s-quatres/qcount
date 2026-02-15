@@ -62,30 +62,42 @@ BeatCounterApp.prototype.processSong = async function(song) {
         song.beats = bassBand.beats;
         song.bpm = bassBand.bpm;
 
-        // Compute energy consensus: re-evaluate each band's envelope against
-        // the BASS beat grid so all offsets are in the same coordinate system.
-        // (Per-band phraseOffset uses each band's own beat grid, which may be
-        //  shifted by a beat or more relative to the bass grid.)
+        // Compute energy consensus: aggregate raw onset strengths across all bands
+        // evaluated against the BASS beat grid, then apply backbeat correction once
+        // on the cleaner aggregated signal.
         const bandWeights = [0.5, 1.0, 0.8, 0.6, 0.4, 0.3, 0.2, 0.1];
-        const energyVotes = new Float64Array(8);
+        const aggregatedOnset = new Float64Array(8);
         for (let b = 0; b < song.bands.length; b++) {
             const band = song.bands[b];
             const result = this.findBandPhraseAlignment(song.beats, band.envelope);
-            const pos = (8 - (result.offset || 0)) % 8;
-            energyVotes[pos] += (result.confidence || 0) * (bandWeights[b] || 0.1);
-        }
-        let maxEV = 0, secondEV = 0, bestEP = 0;
-        for (let i = 0; i < 8; i++) {
-            if (energyVotes[i] > maxEV) {
-                secondEV = maxEV;
-                maxEV = energyVotes[i];
-                bestEP = i;
-            } else if (energyVotes[i] > secondEV) {
-                secondEV = energyVotes[i];
+            if (result.positionEnergy) {
+                // Normalize each band's pattern to 0-1 so loud bands don't dominate
+                let bandMax = 0;
+                for (let i = 0; i < 8; i++) {
+                    if (result.positionEnergy[i] > bandMax) bandMax = result.positionEnergy[i];
+                }
+                if (bandMax > 0) {
+                    for (let i = 0; i < 8; i++) {
+                        aggregatedOnset[i] += (result.positionEnergy[i] / bandMax) * (bandWeights[b] || 0.1);
+                    }
+                }
             }
         }
+        // Find peak in aggregated onset pattern and apply backbeat correction
+        let maxAO = 0, secondAO = 0, bestAP = 0;
+        for (let i = 0; i < 8; i++) {
+            if (aggregatedOnset[i] > maxAO) {
+                secondAO = maxAO;
+                maxAO = aggregatedOnset[i];
+                bestAP = i;
+            } else if (aggregatedOnset[i] > secondAO) {
+                secondAO = aggregatedOnset[i];
+            }
+        }
+        // Backbeat correction: in swing, the strongest onset is typically on beat 2
+        const bestEP = (bestAP - 1 + 8) % 8;
         song.energyConsensusOffset = (8 - bestEP) % 8;
-        song.energyConsensusConfidence = maxEV > 0 ? (maxEV - secondEV) / maxEV : 0;
+        song.energyConsensusConfidence = maxAO > 0 ? (maxAO - secondAO) / maxAO : 0;
 
         // === Additional analyses for phrase detection methods ===
         song.analysis = {};
@@ -396,10 +408,12 @@ BeatCounterApp.prototype.validate8Counts = function(beats, bpm, duration) {
         }
     }
 
-    const matchRate = (matchedBeats / finalBeats.length * 100).toFixed(1);
-    console.log(`Plan has ${finalBeats.length} beats, ${matchedBeats} matched to detected (${matchRate}%)`);
+    const matchRate = matchedBeats / finalBeats.length;
+    console.log(`Plan has ${finalBeats.length} beats, ${matchedBeats} matched to detected (${(matchRate * 100).toFixed(1)}%)`);
     console.log(`=== END ANALYSIS ===\n`);
 
+    // Attach match rate as a property so callers can assess grid quality
+    finalBeats.matchRate = matchRate;
     return finalBeats;
 };
 
@@ -475,5 +489,9 @@ BeatCounterApp.prototype.findBandPhraseAlignment = function(beats, envelope) {
     // so the onset peak lands one position AFTER the musical "1".
     // Shift back by one to find the true phrase start.
     const phraseStartPos = (bestPos - 1 + 8) % 8;
-    return { offset: (8 - phraseStartPos) % 8, confidence };
+    return {
+        offset: (8 - phraseStartPos) % 8,
+        confidence,
+        positionEnergy: positionEnergy,  // raw per-position onset strengths
+    };
 };

@@ -15,18 +15,16 @@ BeatCounterApp.prototype.computeCombinedPhraseOffset = function(song) {
         methods.push({ name: 'Energy', offset, confidence });
     }
 
-    // Harmony (beat-sync chroma): confidence-weighted with 1.5x boost.
-    // Harmony detects chord changes at phrase boundaries — when confident,
-    // it's the most musically meaningful signal. Only include if confidence
-    // exceeds a minimum threshold; below it the chroma distances are too
-    // uniform to carry useful phrase information.
-    const HARMONY_MIN_CONFIDENCE = 0.05;
+    // Harmony (beat-sync chroma): low weight — unreliable for swing music
+    // where chord changes don't consistently align with phrase boundaries.
+    // Only include when confidence is high enough to be meaningful.
+    const HARMONY_MIN_CONFIDENCE = 0.15;
     if (song.analysis.harmonyPhraseOffset != null &&
         (song.analysis.harmonyConfidence || 0) >= HARMONY_MIN_CONFIDENCE) {
         const offset = song.analysis.harmonyPhraseOffset;
         const confidence = song.analysis.harmonyConfidence;
         const pos = (8 - offset) % 8;
-        votes[pos] += confidence * 1.5;
+        votes[pos] += confidence * 0.5;
         methods.push({ name: 'Harmony', offset, confidence });
     }
 
