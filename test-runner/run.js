@@ -48,11 +48,11 @@ for (const f of ['fft.js','analysis.js','analysis-harmony.js','analysis-rhythm.j
     vm.runInThisContext(code, { filename: f });
 }
 
-// ── Test data ──────────────────────────────────────────────────────────────────
+// ── Test data (index is array of expected beat-1 timestamps) ─────────────────
 const EXPECTED = {
-    'swinginsafari.mp3': 59.1,
-    'doright.mp3':       19.0,
-    'VIC017467.mp3':     49.0,
+    'swinginsafari.mp3': [59.1],
+    'doright.mp3':       [19.0, 42.3],
+    'VIC017467.mp3':     [49.0],
 };
 const METHODS    = ['energy', 'harmony', 'rhythm', 'combined'];
 const MP3_DIR    = path.join(__dirname, '../mp3');
@@ -86,7 +86,7 @@ async function main() {
     const app = new BeatCounterApp();
     let totalPass = 0, totalFail = 0;
 
-    for (const [filename, expectedTime] of Object.entries(EXPECTED)) {
+    for (const [filename, expectedTimes] of Object.entries(EXPECTED)) {
         const filePath = path.join(MP3_DIR, filename);
         if (!fs.existsSync(filePath)) {
             console.log(Y(`\n⚠  ${filename} not found, skipping`));
@@ -100,8 +100,6 @@ async function main() {
 
         const song = {
             name: filename,
-            // Mock the File object: processSong reads song.file via FileReader,
-            // so we bypass processSong's file-reading and feed audioBuffer directly.
             audioBuffer: await app.audioContext.decodeAudioData(arrayBuffer),
         };
 
@@ -166,11 +164,10 @@ async function main() {
         song.analysis.combinedPhraseOffset = song.analysis.combinedData.phraseOffset;
         process.stdout.write('                              \r');
 
-        console.log(`  BPM: ${song.bpm?.toFixed(1)}   Bass beats: ${song.beats.length}   Expected "1" at: ${expectedTime}s`);
+        console.log(`  BPM: ${song.bpm?.toFixed(1)}   Bass beats: ${song.beats.length}   Expected "1" at: ${expectedTimes.join(', ')}s`);
         console.log();
 
-        // Per-band phrase offsets for debugging
-        // Print per-band offsets
+        // Per-band phrase offsets
         console.log(D('  Per-band: ' + song.bands.map((b,i) =>
             `${b.name}[${b.phraseOffset}/${(b.phraseConfidence*100).toFixed(0)}%]`
         ).join('  ')));
@@ -186,34 +183,50 @@ async function main() {
             `[${i}]${(v/rpMax*10).toFixed(0).padStart(2)}`).join(' ');
         console.log(D(`  Rhythm pattern (pos→strength): ${rpBar}`));
 
-        // Show beats near expected time
-        const targetTime = expectedTime;
-        const nearBeats = song.beats
-            .map((b, i) => ({ time: b.time, idx: i, pos: i % 8, diff: Math.abs(b.time - targetTime) }))
-            .filter(b => b.diff < 3.0)
-            .sort((a, b) => a.diff - b.diff)
-            .slice(0, 6);
-        console.log(D(`  Beats near ${targetTime}s: ` + nearBeats.map(b =>
-            `t=${b.time.toFixed(3)}[i=${b.idx},pos=${b.pos},Δ=${b.diff.toFixed(3)}]`
-        ).join('  ')));
+        // Show beats near each expected time
+        for (const targetTime of expectedTimes) {
+            const nearBeats = song.beats
+                .map((b, i) => ({ time: b.time, idx: i, pos: i % 8, diff: Math.abs(b.time - targetTime) }))
+                .filter(b => b.diff < 3.0)
+                .sort((a, b) => a.diff - b.diff)
+                .slice(0, 6);
+            console.log(D(`  Beats near ${targetTime}s: ` + nearBeats.map(b =>
+                `t=${b.time.toFixed(3)}[i=${b.idx},pos=${b.pos},Δ=${b.diff.toFixed(3)}]`
+            ).join('  ')));
+        }
+
+        // Drift analysis: check beat interval consistency between expected times
+        if (expectedTimes.length >= 2) {
+            const interval = 60 / song.bpm;
+            for (let t = 1; t < expectedTimes.length; t++) {
+                const span = expectedTimes[t] - expectedTimes[0];
+                const beatsInSpan = Math.round(span / interval);
+                const impliedInterval = span / beatsInSpan;
+                const impliedBpm = 60 / impliedInterval;
+                const drift = span - beatsInSpan * interval;
+                console.log(D(`  Drift ${expectedTimes[0]}→${expectedTimes[t]}s: ${span.toFixed(3)}s = ${beatsInSpan} beats, implied BPM=${impliedBpm.toFixed(1)}, drift=${drift.toFixed(3)}s`));
+            }
+        }
         console.log();
 
-        // Check each method: find the beat closest to expectedTime,
-        // then verify that beat is counted as "1" with the method's offset.
-        console.log(`  ${'Method'.padEnd(10)} ${'Offset'.padEnd(8)} ${'Nearest beat'.padEnd(16)} ${'Count'.padEnd(7)} Result`);
-        console.log(`  ${'-'.repeat(55)}`);
+        // Check each method at each expected time
+        for (const targetTime of expectedTimes) {
+            console.log(`  @${targetTime}s ${'Method'.padEnd(10)} ${'Offset'.padEnd(8)} ${'Nearest beat'.padEnd(16)} ${'Count'.padEnd(7)} Result`);
+            console.log(`  ${'-'.repeat(65)}`);
 
-        for (const method of METHODS) {
-            app.activeMethod = method;
-            const offset = app.getPhraseOffsetForMethod(song);
-            const r = checkNearestBeat(song.beats, offset, expectedTime);
-            if (r.pass) totalPass++; else totalFail++;
-            const result = r.pass ? G('✓ PASS') : R(`✗ FAIL (counted as "${r.count}")`);
-            console.log(`  ${method.padEnd(10)} ${String(offset).padEnd(8)} ${(r.beatTime.toFixed(3) + 's [i=' + r.beatIdx + ']').padEnd(16)} ${String(r.count).padEnd(7)} ${result}`);
+            for (const method of METHODS) {
+                app.activeMethod = method;
+                const offset = app.getPhraseOffsetForMethod(song);
+                const r = checkNearestBeat(song.beats, offset, targetTime);
+                if (r.pass) totalPass++; else totalFail++;
+                const result = r.pass ? G('✓ PASS') : R(`✗ FAIL (counted as "${r.count}")`);
+                console.log(`  ${(' ').repeat(7)} ${method.padEnd(10)} ${String(offset).padEnd(8)} ${(r.beatTime.toFixed(3) + 's [i=' + r.beatIdx + ']').padEnd(16)} ${String(r.count).padEnd(7)} ${result}`);
+            }
+            console.log();
         }
     }
 
-    console.log(`\n${'─'.repeat(50)}`);
+    console.log(`${'─'.repeat(50)}`);
     const summary = `${totalPass} passed, ${totalFail} failed`;
     console.log(totalFail === 0 ? G(summary) : R(summary));
 }

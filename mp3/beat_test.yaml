@@ -1,7 +1,7 @@
 files:
   - name: swinginsafari.mp3
-    index: 59.1
+    index: [59.1]
   - name: doright.mp3
-    index: 19.0
+    index: [19.0, 42.3]
   - name: VIC017467.mp3
-    index: 49.0
+    index: [49.0]
