@@ -416,43 +416,42 @@ BeatCounterApp.prototype.generateBeatsFromBpm = function(bpm, duration, startTim
 };
 
 BeatCounterApp.prototype.findBandPhraseAlignment = function(beats, envelope) {
-    // Find best offset (0-7) so beat 1 aligns with highest energy in this band
+    // Find best offset (0-7) so beat 1 aligns with strongest onset in this band.
+    // Uses onset (energy rise / spectral flux) rather than peak energy, because
+    // in swing music beat 2 often sustains higher energy than the downbeat.
+    // The downbeat has the strongest energy INCREASE (attack/chord change).
     if (beats.length < 32) return { offset: 0, confidence: 0 };
 
     const hopSec = this.ENVELOPE_HOP_MS / 1000;
     const startBeat = Math.min(16, Math.floor(beats.length * 0.1));
     const analysisBeats = beats.slice(startBeat);
 
-    // Compensate for bandpass filter group delay + RMS window center offset
-    // (~15ms filter delay + ~10ms RMS center = ~25ms ≈ 3 frames at 10ms hop)
-    const lagFrames = 3;
-    const windowHalf = 3; // ±30ms window to catch attack peak
+    const windowHalf = 3; // ±30ms window
 
-    // Get peak envelope energy in a window around each beat position
-    const beatEnergies = analysisBeats.map((beat, idx) => {
-        const centerFrame = Math.floor(beat.time / hopSec) - lagFrames;
-        let maxEnergy = 0;
+    // Get max onset strength (energy rise) in a window around each beat
+    const beatOnsets = analysisBeats.map((beat, idx) => {
+        const centerFrame = Math.floor(beat.time / hopSec);
+        let maxOnset = 0;
         for (let w = -windowHalf; w <= windowHalf; w++) {
             const f = centerFrame + w;
-            if (f >= 0 && f < envelope.length) {
-                maxEnergy = Math.max(maxEnergy, envelope[f]);
+            if (f >= 1 && f < envelope.length) {
+                const flux = Math.max(0, envelope[f] - envelope[f - 1]);
+                maxOnset = Math.max(maxOnset, flux);
             }
         }
-        return { index: startBeat + idx, energy: maxEnergy };
+        return { index: startBeat + idx, onset: maxOnset };
     });
 
-    // Energy-weighted scoring: sum actual energies at each position (0-7)
-    // instead of just counting beats above a threshold. This captures accent
-    // magnitude so strong downbeats dominate even in bands with uniform energy.
+    // Onset-weighted scoring: sum onset strengths at each position (0-7)
     const positionEnergy = new Float64Array(8);
     const positionCounts = new Float64Array(8);
-    for (const be of beatEnergies) {
-        const pos = be.index % 8;
-        positionEnergy[pos] += be.energy;
+    for (const bo of beatOnsets) {
+        const pos = bo.index % 8;
+        positionEnergy[pos] += bo.onset;
         positionCounts[pos]++;
     }
 
-    // Average energy per position
+    // Average onset per position
     for (let i = 0; i < 8; i++) {
         if (positionCounts[i] > 0) positionEnergy[i] /= positionCounts[i];
     }
@@ -471,5 +470,10 @@ BeatCounterApp.prototype.findBandPhraseAlignment = function(beats, envelope) {
     }
 
     const confidence = maxEnergy > 0 ? (maxEnergy - secondMax) / maxEnergy : 0;
-    return { offset: (8 - bestPos) % 8, confidence };
+
+    // In swing music the backbeat (beat "2") carries the strongest accent,
+    // so the onset peak lands one position AFTER the musical "1".
+    // Shift back by one to find the true phrase start.
+    const phraseStartPos = (bestPos - 1 + 8) % 8;
+    return { offset: (8 - phraseStartPos) % 8, confidence };
 };
